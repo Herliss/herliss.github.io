@@ -1,0 +1,32 @@
+# Archivos sensibles
+*.env
+*.key
+*.pem
+.env.local
+config.json
+secrets/
+
+# Sistema
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
+logs/
+
+# Backups
+*.bak
+*.backup
+*~
+
+# Temporales
+tmp/
+temp/
+cache/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo

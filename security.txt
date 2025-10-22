@@ -1,0 +1,57 @@
+Contact: mailto:security@herlissbriceno.com
+Contact: https://www.herlissbriceno.com/contact
+Expires: 2026-12-31T23:59:59.000Z
+Preferred-Languages: es, en
+Canonical: https://www.herlissbriceno.com/security.txt
+Policy: https://www.herlissbriceno.com/legal/vulnerability-disclosure-policy.html
+```
+
+5. Guarda: `Ctrl + S`
+
+---
+
+## 📋 Archivos que aún faltan (veo que tienes algunos con "M" y "U"):
+
+Veo que tienes varios archivos modificados. Ahora necesitas crear estos archivos faltantes:
+
+### **1. _headers** (falta crear)
+
+1. **Clic derecho** en la raíz → **"New File"**
+2. Nómbralo: `_headers` (sin extensión)
+3. Pega este contenido:
+```
+/*
+  X-Frame-Options: DENY
+  X-Content-Type-Options: nosniff
+  X-XSS-Protection: 1; mode=block
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: geolocation=(), microphone=(), camera=()
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:;
+  Strict-Transport-Security: max-age=31536000; includeSubDomains; preload
+```
+
+---
+
+### **2. Verificar que article.css existe**
+
+1. Ve a `assets/css/`
+2. Si **NO existe** `article.css`, créalo:
+   - Clic derecho en `css` → **"New File"**
+   - Nómbralo: `article.css`
+   - Copia el contenido del **artefacto #6** (article.css) que te di antes
+
+---
+
+## 🚀 Ahora sí, vamos a hacer Commit y Push:
+
+### **Paso 1: Ver los cambios**
+1. Haz clic en el ícono de **Source Control** (panel izquierdo, ícono de ramificación)
+2. Verás todos los archivos que has modificado o creado
+
+### **Paso 2: Stage (agregar) todos los cambios**
+- Clic en el **"+"** junto a "Changes" para agregar todos
+
+### **Paso 3: Commit**
+- En la caja de texto arriba, escribe:
+```
+feat: estructura completa del blog con seguridad

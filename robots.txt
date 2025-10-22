@@ -1,2 +1,8 @@
 User-agent: *
-Disallow: /
+Allow: /
+Disallow: /admin/
+Disallow: /private/
+Disallow: /*.json$
+Disallow: /.git/
+
+Sitemap: https://www.herlissbriceno.com/sitemap.xml
