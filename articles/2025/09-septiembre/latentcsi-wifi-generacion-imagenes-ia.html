@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    
+    <title>LatentCSI: Reconstrucción de Imágenes desde WiFi sin Cámaras | Herliss Briceño</title>
+    <meta name="description" content="Análisis técnico de LatentCSI: investigación que demuestra reconstrucción de imágenes de alta resolución mediante señales WiFi CSI usando modelos de difusión latente.">
+    <meta name="keywords" content="LatentCSI, WiFi CSI, vigilancia pasiva, inteligencia artificial, diffusion model, privacidad, ciberseguridad física">
+    <meta name="author" content="Herliss Briceño">
+    
+    <meta property="og:title" content="LatentCSI: Vigilancia sin Cámaras mediante WiFi">
+    <meta property="og:description" content="Investigación del Institute of Science Tokyo sobre generación de imágenes desde señales WiFi">
+    <meta property="og:type" content="article">
+    <meta property="og:url" content="https://www.herlissbriceno.com/articles/2025/09-septiembre/latentcsi-wifi-generacion-imagenes-ia.html">
+    <meta property="article:published_time" content="2025-09-05T10:00:00Z">
+    
+    <link rel="canonical" href="https://www.herlissbriceno.com/articles/2025/09-septiembre/latentcsi-wifi-generacion-imagenes-ia.html">
+    <link rel="icon" type="image/png" href="/assets/images/favicon.png">
+    <link rel="stylesheet" href="/assets/css/main.css">
+    <link rel="stylesheet" href="/assets/css/article.css">
+</head>
+<body>
+    <header class="main-header">
+        <nav class="navbar">
+            <div class="container">
+                <div class="nav-brand">
+                    <a href="/" aria-label="Inicio">
+                        <h1>Herliss Briceño</h1>
+                        <p class="tagline">Ciberseguridad e IA</p>
+                    </a>
+                </div>
+                <ul class="nav-menu" role="navigation">
+                    <li><a href="/">Inicio</a></li>
+                    <li><a href="/categories/trabajos-investigacion.html">Investigación</a></li>
+                    <li><a href="/categories/noticias.html">Noticias</a></li>
+                    <li><a href="/categories/frameworks.html">Frameworks</a></li>
+                    <li><a href="/about/">Who am I?</a></li>
+                    <li><a href="/contact/">Contacto</a></li>
+                </ul>
+                <button class="menu-toggle" aria-label="Abrir menú" aria-expanded="false">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </button>
+            </div>
+        </nav>
+    </header>
+
+    <main class="article-page">
+        <div class="container">
+            <nav class="breadcrumb" aria-label="Breadcrumb">
+                <ol>
+                    <li><a href="/">Inicio</a></li>
+                    <li><a href="/categories/trabajos-investigacion.html">Investigación</a></li>
+                    <li aria-current="page">LatentCSI: WiFi como Sensor Visual</li>
+                </ol>
+            </nav>
+
+            <article class="article-content">
+                <header class="article-header">
+                    <div class="article-meta">
+                        <time datetime="2025-09-05">5 de Septiembre, 2025</time>
+                        <span class="reading-time">10 min de lectura</span>
+                        <span class="category">Investigación</span>
+                    </div>
+                    
+                    <h1>LatentCSI: Generación de Imágenes de Alta Resolución desde Señales WiFi sin Cámaras</h1>
+                    
+                    <p class="article-lead">
+                        Una investigación del Institute of Science Tokyo demostró que las señales WiFi pueden utilizarse para reconstruir imágenes de personas y espacios sin cámaras ni acceso físico, aprovechando solo las ondas inalámbricas que ya atraviesan los entornos.
+                    </p>
+                </header>
+
+                <div class="article-body">
+                    <h2>Contexto y Fundamentos Técnicos</h2>
+                    <p>
+                        La investigación presenta <strong>LatentCSI</strong>, un método innovador que aprovecha el Channel State Information (CSI) de señales WiFi comerciales para generar imágenes RGB de alta resolución (512×512 píxeles) del entorno físico. A diferencia de enfoques anteriores basados en redes generativas adversariales (GANs), LatentCSI utiliza un modelo de difusión latente preentrenado (Stable Diffusion v1.5), lo que reduce significativamente la complejidad computacional y el tiempo de entrenamiento.
+                    </p>
+
+                    <h3>¿Qué es el Channel State Information (CSI)?</h3>
+                    <p>
+                        El CSI es información computada durante el proceso de ecualización de símbolos recibidos en sistemas de comunicación multiportadora como WiFi. Contiene datos ricos sobre el entorno de propagación de señales, incluyendo:
+                    </p>
+                    <ul>
+                        <li>Atenuación de señal por obstrucción física</li>
+                        <li>Reflexiones y patrones de propagación multitrayecto</li>
+                        <li>Variaciones temporales causadas por movimiento</li>
+                        <li>Características espaciales del entorno</li>
+                    </ul>
+
+                    <div class="alert alert-info">
+                        <strong>💡 Detalle Técnico:</strong> La investigación utilizó equipos comerciales estándar (Intel AX210) operando en canales de 160 MHz con 1,992 subportadoras, capturando mediciones a 10 Hz. El sistema no requiere hardware especializado ni modificaciones a la infraestructura WiFi existente.
+                    </div>
+
+                    <h2>Arquitectura Técnica de LatentCSI</h2>
+
+                    <h3>Componentes del Sistema</h3>
+                    <p>
+                        LatentCSI consta de tres elementos principales:
+                    </p>
+
+                    <ol>
+                        <li>
+                            <strong>CSI Encoder (Red Neuronal Ligera):</strong> Mapea amplitudes de CSI directamente al espacio latente del modelo de difusión. Con solo 22.9 millones de parámetros entrenables, este encoder utiliza:
+                            <ul>
+                                <li>4 bloques de upsampling con residual connections</li>
+                                <li>Cross-attention layers para preservar información global</li>
+                                <li>Arquitectura inspirada en el VAE encoder de Stable Diffusion</li>
+                            </ul>
+                        </li>
+                        
+                        <li>
+                            <strong>Latent Diffusion Model (Preentrenado):</strong> Modelo de denoising basado en U-Net que opera en espacio latente, reduciendo la dimensionalidad de 512×512×3 (imagen RGB) a 64×64×4 (representación latente comprimida).
+                        </li>
+                        
+                        <li>
+                            <strong>VAE Decoder (Preentrenado):</strong> Reconstruye imágenes RGB de alta resolución desde el espacio latente.
+                        </li>
+                    </ol>
+
+                    <h3>Ventajas sobre Métodos Previos</h3>
+                    <p>
+                        Comparado con arquitecturas GAN como CSI2Image:
+                    </p>
+                    <ul>
+                        <li><strong>Eficiencia computacional:</strong> 3× más rápido en entrenamiento</li>
+                        <li><strong>Calidad perceptual superior:</strong> FID (Fréchet Inception Distance) hasta 50% mejor</li>
+                        <li><strong>Arquitectura simplificada:</strong> Una sola red en lugar de generator + discriminator</li>
+                        <li><strong>Escalabilidad:</strong> Aprovecha modelos preentrenados sin requerir datasets masivos</li>
+                    </ul>
+
+                    <div class="alert alert-warning">
+                        <strong>⚠️ Capacidades Técnicas Demostradas:</strong> El sistema identificó correctamente posición, movimiento y forma humana dentro de habitaciones cerradas, con mejor rendimiento en entornos con infraestructura WiFi densa (160 MHz, 1,992 subportadoras) versus resolución espectral limitada (40 MHz, 342 subportadoras del dataset MM-Fi).
+                    </div>
+
+                    <h2>Capacidades de Text-Guided Generation</h2>
+                    <p>
+                        Una característica única de LatentCSI es su capacidad para manipular imágenes generadas mediante prompts de texto, heredada del uso de Stable Diffusion. Esto permite:
+                    </p>
+                    <ul>
+                        <li><strong>Transformaciones estilísticas:</strong> "anime style", "realistic photography", "pencil drawing"</li>
+                        <li><strong>Modificación de atributos:</strong> Cambiar apariencia de ropa, iluminación, o contexto ambiental</li>
+                        <li><strong>Refinamiento controlado:</strong> Ajustar nivel de detalle mediante parámetro de "strength" (0-1)</li>
+                    </ul>
+
+                    <p>
+                        Este control textual es particularmente relevante para aplicaciones de privacidad, ya que el cuello de botella dimensional del encoder (64×64×4 latent) <strong>inherentemente previene la reconstrucción exacta de características faciales o detalles identificables</strong>, mientras permite la síntesis de contenido visualmente plausible.
+                    </p>
+
+                    <h2>Resultados Experimentales</h2>
+
+                    <h3>Dataset 1: Posición y Orientación Humana</h3>
+                    <p>
+                        Escenario realista con un sujeto caminando en entorno indoor durante 25 minutos (15,000 muestras pareadas CSI-imagen):
+                    </p>
+                    <ul>
+                        <li><strong>FID:</strong> 134.23 (LatentCSI) vs 268.03 (baseline pixel-space) - <em>49% mejor</em></li>
+                        <li><strong>SSIM (human-cropped):</strong> 0.83 vs 0.78</li>
+                        <li><strong>Tiempo de entrenamiento:</strong> 5 min vs 16 min por época</li>
+                    </ul>
+
+                    <h3>Dataset 2: MM-Fi (Poses Humanas)</h3>
+                    <p>
+                        Ambiente controlado con poses fijas (23,760 muestras):
+                    </p>
+                    <ul>
+                        <li><strong>FID:</strong> 28.21 (LatentCSI) vs 47.67 (baseline) - <em>41% mejor</em></li>
+                        <li><strong>Observación clave:</strong> El baseline pixel-space memoriza features de baja varianza, pero LatentCSI produce anatomías más coherentes</li>
+                    </ul>
+
+                    <h2>🔐 Riesgos de Ciberseguridad y Privacidad</h2>
+
+                    <h3>1. Vigilancia Pasiva No Detectable</h3>
+                    <p>
+                        <strong>Implicación crítica:</strong> Actividades físicas pueden ser monitoreadas sin cámaras visibles, micrófonos, ni sensores adicionales. La infraestructura WiFi existente se convierte en un sensor pasivo de vigilancia.
+                    </p>
+                    <ul>
+                        <li>No requiere instalación de dispositivos nuevos</li>
+                        <li>Funciona a través de paredes y obstáculos</li>
+                        <li>Indetectable por inspecciones físicas tradicionales</li>
+                        <li>No genera tráfico de red anómalo (usa señales beacon/data normales)</li>
+                    </ul>
+
+                    <h3>2. Extracción de Patrones Operativos</h3>
+                    <p>
+                        El sistema puede inferir:
+                    </p>
+                    <ul>
+                        <li><strong>Horarios de ocupación:</strong> Presencia/ausencia de personal</li>
+                        <li><strong>Flujos de movimiento:</strong> Rutas frecuentes, puntos de congregación</li>
+                        <li><strong>Número de ocupantes:</strong> Densidad y distribución espacial</li>
+                        <li><strong>Actividades generales:</strong> Patrones de comportamiento (aunque imágenes sean de baja fidelidad)</li>
+                    </ul>
+
+                    <h3>3. Vector de Ataque Emergente</h3>
+                    <p>
+                        <strong>Threat modeling:</strong> Un atacante con acceso a un dispositivo WiFi comprometido dentro del rango de cobertura podría:
+                    </p>
+                    <ul>
+                        <li>Recolectar CSI pasivamente sin generar tráfico detectable</li>
+                        <li>Procesar datos offline para evitar detección de cómputo anómalo</li>
+                        <li>Operar durante períodos extendidos sin baterías (dispositivos conectados a red eléctrica)</li>
+                        <li>Combinar con otras fuentes de inteligencia para correlation attacks</li>
+                    </ul>
+
+                    <div class="alert alert-danger">
+                        <strong>🚨 Escenario de Alto Riesgo:</strong> En entornos corporativos con WiFi denso (múltiples APs, canales anchos), la resolución espacial y temporal de CSI permite reconstrucciones de mayor fidelidad. Salas de juntas, áreas de I+D, o espacios con información clasificada son objetivos de alto valor.
+                    </div>
+
+                    <h3>4. Evolución Acelerada de Capacidades</h3>
+                    <p>
+                        La investigación actual genera imágenes que, si bien no revelan identidades faciales exactas, ya permiten:
+                    </p>
+                    <ul>
+                        <li>Estimación de pose corporal</li>
+                        <li>Identificación de género aproximado</li>
+                        <li>Reconocimiento de patrones de vestimenta</li>
+                        <li>Inferencia de actividades (sentado, de pie, caminando)</li>
+                    </ul>
+
+                    <p>
+                        <strong>Proyección:</strong> Con el avance de modelos de difusión (Stable Diffusion 3, DALL-E 3, etc.) y técnicas de super-resolución, la brecha entre "imágenes borrosas" y "reconstrucciones fotorrealistas" se está cerrando rápidamente.
+                    </p>
+
+                    <h2>Controles de Mitigación Propuestos</h2>
+
+                    <h3>Nivel de Infraestructura</h3>
+                    <ul>
+                        <li><strong>Segmentación de red WiFi:</strong> Separar redes guest/corporativas con aislamiento de CSI</li>
+                        <li><strong>Detección de monitoreo pasivo:</strong> Implementar IDS que identifiquen patrones de captura CSI anómalos</li>
+                        <li><strong>Rotación de canales:</strong> Cambios frecuentes de canal/frecuencia para dificultar recolección consistente</li>
+                        <li><strong>Reducción de densidad AP:</strong> Optimizar cobertura vs exposición de CSI</li>
+                    </ul>
+
+                    <h3>Nivel de Arquitectura</h3>
+                    <ul>
+                        <li><strong>Zonas de exclusión WiFi:</strong> Áreas críticas sin cobertura inalámbrica</li>
+                        <li><strong>Shielding electromagnético:</strong> Jaulas de Faraday en salas sensibles</li>
+                        <li><strong>802.11 frame encryption:</strong> Aunque CSI usa pilots/sync, aumentar complejidad de demodulación</li>
+                    </ul>
+
+                    <h3>Nivel de Política y Cumplimiento</h3>
+                    <ul>
+                        <li><strong>Privacy Impact Assessments:</strong> Evaluar riesgos de sensado WiFi en GDPR/CCPA compliance</li>
+                        <li><strong>Auditorías de dispositivos IoT:</strong> Inventariar y validar todos los endpoints WiFi</li>
+                        <li><strong>Consentimiento informado:</strong> En espacios privados, notificar sobre capacidades de sensado WiFi</li>
+                    </ul>
+
+                    <div class="alert alert-success">
+                        <strong>✓ Recomendación Estratégica:</strong> Integrar CSI-based sensing en threat models de seguridad física. Realizar red team exercises que incluyan vectores de ataque basados en señales inalámbricas. Evaluar si áreas críticas requieren air-gapping electromagnético además de aislamiento de red.
+                    </div>
+
+                    <h2>Consideraciones de Privacidad vs. Aplicaciones Legítimas</h2>
+
+                    <h3>Usos Beneficiosos</h3>
+                    <p>
+                        Es importante reconocer que CSI-based sensing tiene aplicaciones legítimas:
+                    </p>
+                    <ul>
+                        <li><strong>Healthcare:</strong> Monitoreo de caídas en adultos mayores sin cámaras invasivas</li>
+                        <li><strong>Smart homes:</strong> Detección de ocupación para eficiencia energética</li>
+                        <li><strong>Seguridad física:</strong> Detección de intrusos en perímetros sin videovigilancia</li>
+                        <li><strong>Retail analytics:</strong> Flujos de clientes sin tracking facial</li>
+                    </ul>
+
+                    <h3>Balance Privacy-Utility</h3>
+                    <p>
+                        El bottleneck dimensional de LatentCSI (64×64×4 latent) es intencionalmente una feature de privacidad: previene reconstrucción de identificadores biométricos finos mientras preserva utilidad para reconocimiento de actividad. Sin embargo, esto es un compromiso técnico actual, no una garantía permanente.
+                    </p>
+
+                    <h2>Conclusiones para Profesionales de Ciberseguridad</h2>
+
+                    <p>
+                        LatentCSI representa un cambio de paradigma en sensado ambiental: transforma infraestructura WiFi ubicua en sensores visuales pasivos. Las implicaciones de seguridad son profundas:
+                    </p>
+
+                    <ol>
+                        <li><strong>Las señales inalámbricas son constantes e invisibles,</strong> rara vez contempladas en evaluaciones de riesgo físico</li>
+                        <li><strong>La convergencia de CSI sensing e IA generativa</strong> está acelerando capacidades antes consideradas teóricas</li>
+                        <li><strong>Los threat models tradicionales</strong> deben expandirse para incluir vectores de ataque basados en señales RF</li>
+                        <li><strong>La defensa requiere enfoque multidisciplinario:</strong> ingeniería de RF, arquitectura de red, políticas de privacidad</li>
+                    </ol>
+
+                    <p>
+                        <em>Entender lo invisible también forma parte de proteger lo esencial.</em> Como profesionales de ciberseguridad, debemos anticipar que tecnologías emergentes como LatentCSI redefinirán los límites entre espacios "físicamente seguros" y "técnicamente monitoreables".
+                    </p>
+
+                    <h2>Referencias y Recursos</h2>
+                    <p>
+                        <strong>Fuente original de la investigación:</strong><br>
+                        Ramesh, E., & Nishio, T. (2025). "High-resolution efficient image generation from WiFi CSI using a pretrained latent diffusion model." arXiv:2506.10605v3 [cs.CV]<br>
+                        Institute of Science Tokyo<br>
+                        <a href="https://arxiv.org/abs/2506.10605" target="_blank" rel="noopener noreferrer">https://arxiv.org/abs/2506.10605</a>
+                    </p>
+
+                    <p><strong>Recursos técnicos mencionados:</strong></p>
+                    <ul>
+                        <li>Stable Diffusion v1.5 (Latent Diffusion Model base)</li>
+                        <li>MM-Fi Dataset: Multi-Modal WiFi sensing benchmark</li>
+                        <li>FeitCSI: Herramienta de captura 802.11 CSI</li>
+                    </ul>
+
+                    <div class="cta-box">
+                        <h3>¿Tu organización evalúa riesgos de señales RF?</h3>
+                        <p>Como Arquitecto de Ciberseguridad con experiencia en controles físicos y tecnológicos, puedo ayudarte a integrar threat vectors emergentes como CSI-based sensing en tu programa de seguridad corporativa.</p>
+                        <a href="/contact/" class="btn-primary">Consultoría Estratégica</a>
+                    </div>
+                </div>
+
+                <footer class="article-footer">
+                    <div class="article-tags">
+                        <strong>Tags:</strong>
+                        <a href="/tags/wifi-csi.html" class="tag">WiFi CSI</a>
+                        <a href="/tags/inteligencia-artificial.html" class="tag">Inteligencia Artificial</a>
+                        <a href="/tags/privacidad.html" class="tag">Privacidad</a>
+                        <a href="/tags/vigilancia.html" class="tag">Vigilancia</a>
+                        <a href="/tags/diffusion-models.html" class="tag">Diffusion Models</a>
+                        <a href="/tags/seguridad-fisica.html" class="tag">Seguridad Física</a>
+                    </div>
+
+                    <div class="share-buttons">
+                        <span>Compartir:</span>
+                        <button data-share="twitter" aria-label="Compartir en Twitter">Twitter</button>
+                        <button data-share="linkedin" aria-label="Compartir en LinkedIn">LinkedIn</button>
+                        <button data-share="facebook" aria-label="Compartir en Facebook">Facebook</button>
+                    </div>
+
+                    <div class="author-bio">
+                        <img src="/assets/images/profile.jpg" alt="Herliss Briceño" class="author-avatar">
+                        <div class="author-info">
+                            <h4>Sobre el Autor</h4>
+                            <p>
+                                <strong>Herliss Briceño</strong> es Arquitecto de Ciberseguridad especializado en evaluación de riesgos emergentes y arquitectura de controles. Certificaciones: CISM, ISO27001 Lead Auditor, Master en Cybersecurity Management (UPC Barcelona).
+                            </p>
+                            <a href="/about/" class="author-link">Ver perfil completo →</a>
+                        </div>
+                    </div>
+                </footer>
+            </article>
+        </div>
+    </main>
+
+    <footer class="main-footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h4>Herliss Briceño</h4>
+                    <p>Blog profesional sobre Ciberseguridad e Inteligencia Artificial</p>
+                </div>
+                
+                <div class="footer-section">
+                    <h4>Enlaces</h4>
+                    <ul>
+                        <li><a href="/about/">Who am I?</a></li>
+                        <li><a href="/contact/">Contacto</a></li>
+                        <li><a href="/articles/">Todos los Artículos</a></li>
+                    </ul>
+                </div>
+                
+                <div class="footer-section">
+                    <h4>Legal</h4>
+                    <ul>
+                        <li><a href="/legal/privacy-policy.html">Política de Privacidad</a></li>
+                        <li><a href="/legal/terms.html">Términos de Uso</a></li>
+                        <li><a href="/.well-known/security.txt">Security.txt</a></li>
+                    </ul>
+                </div>
+                
+                <div class="footer-section">
+                    <h4>Seguridad</h4>
+                    <p>¿Encontraste una vulnerabilidad?</p>
+                    <a href="mailto:security@herlissbriceno.com" class="security-link">Reportar de forma responsable</a>
+                </div>
+            </div>
+            
+            <div class="footer-bottom">
+                <p>&copy; 2025 Herliss Briceño. Todos los derechos reservados.</p>
+                <p class="footer-tech">Construido con seguridad en mente | Hospedado en GitHub Pages</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="/assets/js/main.js" defer></script>
+</body>
+</html>
