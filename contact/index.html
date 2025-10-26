@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    
+    <!-- SEO Meta Tags -->
+    <title>Contacto | Herliss Briceño - Ciberseguridad e IA</title>
+    <meta name="description" content="Ponte en contacto conmigo para consultas sobre ciberseguridad, auditorías de seguridad, arquitectura de seguridad o colaboraciones profesionales.">
+    <meta name="keywords" content="contacto ciberseguridad, consultor seguridad, CISM, ISO27001, arquitecto ciberseguridad">
+    <meta name="author" content="Herliss Briceño">
+    <meta name="robots" content="index, follow">
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://www.herlissbriceno.com/contact/">
+    <meta property="og:title" content="Contacto | Herliss Briceño">
+    <meta property="og:description" content="Contacta conmigo para consultas profesionales en ciberseguridad">
+    
+    <!-- Security Headers -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:;">
+    
+    <!-- Canonical URL -->
+    <link rel="canonical" href="https://www.herlissbriceno.com/contact/">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="/assets/images/favicon.png">
+    
+    <!-- Stylesheet -->
+    <link rel="stylesheet" href="/assets/css/main.css">
+    <link rel="stylesheet" href="/assets/css/contact.css">
+</head>
+<body>
+    <!-- Header -->
+    <header class="main-header">
+        <nav class="navbar">
+            <div class="container">
+                <div class="nav-brand">
+                    <a href="/" aria-label="Inicio">
+                        <h1>Herliss Briceño</h1>
+                        <p class="tagline">Seguridad de la Información, Ciberseguridad e IA</p>
+                    </a>
+                </div>
+                <ul class="nav-menu" role="navigation">
+                    <li><a href="/">Inicio</a></li>
+                    <li><a href="/categories/ciberseguridad.html">Ciberseguridad</a></li>
+                    <li><a href="/categories/inteligencia-artificial.html">IA</a></li>
+                    <li><a href="/categories/certificaciones.html">Certificaciones</a></li>
+                    <li><a href="/about/">Sobre Mí</a></li>
+                    <li><a href="/contact/" class="active">Contacto</a></li>
+                </ul>
+                <button class="menu-toggle" aria-label="Abrir menú" aria-expanded="false">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </button>
+            </div>
+        </nav>
+    </header>
+
+    <!-- Breadcrumb -->
+    <nav class="breadcrumb" aria-label="breadcrumb">
+        <div class="container">
+            <ol>
+                <li><a href="/">Inicio</a></li>
+                <li>Contacto</li>
+            </ol>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="contact-page">
+        <div class="container">
+            <div class="contact-header">
+                <h1>Contacto</h1>
+                <p class="contact-intro">¿Tienes alguna consulta sobre ciberseguridad, necesitas asesoría en arquitectura de seguridad o estás interesado en colaborar? Estoy aquí para ayudarte.</p>
+            </div>
+
+            <div class="contact-content">
+                <!-- Contact Form -->
+                <div class="contact-form-section">
+                    <h2>Envíame un mensaje</h2>
+                    <form id="contactForm" class="contact-form" method="POST" action="https://formspree.io/f/YOUR_FORM_ID" novalidate>
+                        <!-- Honeypot para prevenir spam bots -->
+                        <input type="text" name="_gotcha" style="display:none">
+                        
+                        <!-- Campo oculto para subject -->
+                        <input type="hidden" name="_subject" value="Nuevo mensaje desde herlissbriceno.com">
+                        
+                        <div class="form-group">
+                            <label for="name">Nombre completo *</label>
+                            <input 
+                                type="text" 
+                                id="name" 
+                                name="name" 
+                                required 
+                                maxlength="100"
+                                pattern="[A-Za-zÁÉÍÓÚáéíóúÑñ\s]{2,100}"
+                                autocomplete="name"
+                                aria-required="true">
+                            <span class="error-message" id="name-error"></span>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="email">Correo electrónico *</label>
+                            <input 
+                                type="email" 
+                                id="email" 
+                                name="email" 
+                                required 
+                                maxlength="254"
+                                autocomplete="email"
+                                aria-required="true">
+                            <span class="error-message" id="email-error"></span>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="company">Empresa u organización</label>
+                            <input 
+                                type="text" 
+                                id="company" 
+                                name="company" 
+                                maxlength="100"
+                                autocomplete="organization">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="subject">Asunto *</label>
+                            <select id="subject" name="subject" required aria-required="true">
+                                <option value="">Selecciona un asunto</option>
+                                <option value="consultoria">Consultoría en Ciberseguridad</option>
+                                <option value="auditoria">Auditoría de Seguridad</option>
+                                <option value="arquitectura">Arquitectura de Seguridad</option>
+                                <option value="certificaciones">Certificaciones y Capacitación</option>
+                                <option value="colaboracion">Colaboración Profesional</option>
+                                <option value="vulnerabilidad">Reporte de Vulnerabilidad</option>
+                                <option value="otro">Otro</option>
+                            </select>
+                            <span class="error-message" id="subject-error"></span>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="message">Mensaje *</label>
+                            <textarea 
+                                id="message" 
+                                name="message" 
+                                rows="6" 
+                                required 
+                                maxlength="2000"
+                                aria-required="true"
+                                placeholder="Describe tu consulta o proyecto..."></textarea>
+                            <span class="char-count">0 / 2000 caracteres</span>
+                            <span class="error-message" id="message-error"></span>
+                        </div>
+
+                        <!-- GDPR Consent -->
+                        <div class="form-group checkbox-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="privacy" name="privacy" required aria-required="true">
+                                <span>He leído y acepto la <a href="/legal/privacy-policy.html" target="_blank" rel="noopener">Política de Privacidad</a> *</span>
+                            </label>
+                            <span class="error-message" id="privacy-error"></span>
+                        </div>
+
+                        <div class="form-actions">
+                            <button type="submit" class="btn-primary" id="submitBtn">
+                                <span class="btn-text">Enviar mensaje</span>
+                                <span class="btn-loader" style="display:none;">Enviando...</span>
+                            </button>
+                        </div>
+
+                        <div class="form-message" id="formMessage"></div>
+                    </form>
+                </div>
+
+                <!-- Contact Info Sidebar -->
+                <aside class="contact-info">
+                    <div class="info-card">
+                        <h3>Información de contacto</h3>
+                        
+                        <div class="info-item">
+                            <div class="info-icon">📧</div>
+                            <div>
+                                <strong>Email profesional</strong>
+                                <p><a href="mailto:herliss.briceo@gmail.com">herliss.briceo@gmail.com</a></p>
+                            </div>
+                        </div>
+
+                        <div class="info-item">
+                            <div class="info-icon">🔒</div>
+                            <div>
+                                <strong>Reporte de vulnerabilidades</strong>
+                                <p><a href="mailto:security@herlissbriceno.com">security@herlissbriceno.com</a></p>
+                            </div>
+                        </div>
+
+                        <div class="info-item">
+                            <div class="info-icon">📍</div>
+                            <div>
+                                <strong>Ubicación</strong>
+                                <p>Lima, Perú</p>
+                            </div>
+                        </div>
+
+                        <div class="info-item">
+                            <div class="info-icon">💼</div>
+                            <div>
+                                <strong>LinkedIn</strong>
+                                <p><a href="https://www.linkedin.com/in/herliss-briceno/" target="_blank" rel="noopener noreferrer">Ver perfil profesional</a></p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="info-card availability">
+                        <h3>Disponibilidad</h3>
+                        <p>Respondo mensajes en un plazo de <strong>24-48 horas</strong> durante días laborables.</p>
+                        <p class="note">Para reportes de seguridad críticos, utiliza el correo dedicado de seguridad para respuesta prioritaria.</p>
+                    </div>
+
+                    <div class="info-card expertise">
+                        <h3>Áreas de especialización</h3>
+                        <ul>
+                            <li>✓ Arquitectura de Ciberseguridad</li>
+                            <li>✓ Auditorías ISO 27001</li>
+                            <li>✓ Gestión de Riesgos</li>
+                            <li>✓ Seguridad en la Nube (Azure)</li>
+                            <li>✓ Seguridad de aplicaciones SAP</li>
+                            <li>✓ Seguridad en IA</li>
+                        </ul>
+                    </div>
+                </aside>
+            </div>
+
+            <!-- Security Notice -->
+            <div class="security-notice">
+                <h3>🔐 Comunicación segura</h3>
+                <p>Tu privacidad es importante. Este formulario utiliza protocolos seguros y no compartimos tu información con terceros. Para comunicaciones sensibles o confidenciales, considera usar correo electrónico encriptado o comunicarte directamente a través de canales corporativos seguros.</p>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="main-footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h4>Herliss Briceño</h4>
+                    <p>Blog profesional sobre Ciberseguridad e Inteligencia Artificial</p>
+                </div>
+                
+                <div class="footer-section">
+                    <h4>Enlaces</h4>
+                    <ul>
+                        <li><a href="/about/">Sobre Mí</a></li>
+                        <li><a href="/contact/">Contacto</a></li>
+                        <li><a href="/articles/">Todos los Artículos</a></li>
+                    </ul>
+                </div>
+                
+                <div class="footer-section">
+                    <h4>Legal</h4>
+                    <ul>
+                        <li><a href="/legal/privacy-policy.html">Política de Privacidad</a></li>
+                        <li><a href="/legal/terms.html">Términos de Uso</a></li>
+                        <li><a href="/.well-known/security.txt">Security.txt</a></li>
+                    </ul>
+                </div>
+                
+                <div class="footer-section">
+                    <h4>Seguridad</h4>
+                    <p>¿Encontraste una vulnerabilidad?</p>
+                    <a href="mailto:security@herlissbriceno.com" class="security-link">Reportar de forma responsable</a>
+                </div>
+            </div>
+            
+            <div class="footer-bottom">
+                <p>&copy; 2025 Herliss Briceño. Todos los derechos reservados.</p>
+                <p class="footer-tech">Construido con seguridad en mente | Hospedado en GitHub Pages</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="/assets/js/main.js" defer></script>
+    <script src="/assets/js/contact.js" defer></script>
+</body>
+</html>

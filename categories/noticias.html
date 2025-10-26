@@ -5,13 +5,31 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     
+    <!-- SEO Meta Tags -->
     <title>Noticias de Ciberseguridad | Herliss Briceño</title>
-    <meta name="description" content="Últimas noticias y actualizaciones sobre ciberseguridad, vulnerabilidades, ataques y tendencias en seguridad de la información.">
-    <meta name="keywords" content="noticias ciberseguridad, vulnerabilidades, ataques, actualidad">
+    <meta name="description" content="Últimas noticias y actualizaciones sobre ciberseguridad, vulnerabilidades, amenazas y tendencias en seguridad informática.">
+    <meta name="keywords" content="noticias ciberseguridad, vulnerabilidades, amenazas, hacking, seguridad informática">
+    <meta name="author" content="Herliss Briceño">
+    <meta name="robots" content="index, follow">
     
+    <!-- Open Graph -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://www.herlissbriceno.com/categories/noticias.html">
+    <meta property="og:title" content="Noticias de Ciberseguridad">
+    <meta property="og:description" content="Últimas noticias sobre ciberseguridad e inteligencia artificial">
+    
+    <!-- Security Headers -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://api.rss2json.com;">
+    
+    <!-- Canonical URL -->
     <link rel="canonical" href="https://www.herlissbriceno.com/categories/noticias.html">
+    
+    <!-- Favicon -->
     <link rel="icon" type="image/png" href="/assets/images/favicon.png">
+    
+    <!-- Stylesheets -->
     <link rel="stylesheet" href="/assets/css/main.css">
+    <link rel="stylesheet" href="/assets/css/news.css">
 </head>
 <body>
     <!-- Header -->
@@ -42,87 +60,106 @@
     </header>
 
     <!-- Hero Section -->
-    <section class="hero">
+    <section class="hero-news">
         <div class="container">
-            <div class="hero-content">
-                <h2>📰 Noticias de Ciberseguridad</h2>
-                <p class="hero-subtitle">Mantente actualizado con las últimas noticias, vulnerabilidades y tendencias en seguridad</p>
-            </div>
+            <h1>📰 Noticias de Ciberseguridad</h1>
+            <p>Últimas actualizaciones sobre vulnerabilidades, amenazas y tendencias en seguridad informática</p>
         </div>
     </section>
 
     <!-- Main Content -->
-    <main class="main-content">
+    <main class="news-content">
         <div class="container">
-            <section class="articles-section">
-                <h2 class="section-title">Últimas Noticias</h2>
-                
-                <!-- Artículo Ratty -->
-                <article class="article-card">
-                    <div class="article-meta">
-                        <time datetime="2025-09-17">17 de Septiembre, 2025</time>
-                        <span class="category">Noticias</span>
-                    </div>
-                    <h3><a href="/articles/2025/09-septiembre/ratty-troyano-phishing-pdfs-latinoamerica.html">Ratty: Un Troyano que se Propaga en Latinoamérica a través de PDFs Maliciosos</a></h3>
-                    <p>Una reciente campaña de ciberataques en Latinoamérica, con foco en Perú e identificada por ESET, demuestra cómo una táctica aparentemente simple puede generar consecuencias de alto impacto para el negocio. El vector de entrada es conocido: un PDF malicioso distribuido mediante ingeniería social. Sin embargo, el verdadero riesgo está en el alcance del troyano Ratty, capaz de comprometer seriamente la seguridad organizacional.</p>
-                    <a href="/articles/2025/09-septiembre/ratty-troyano-phishing-pdfs-latinoamerica.html" class="read-more">Leer más →</a>
-                </article>
+            
+            <!-- Filtros de Fuentes -->
+            <div class="news-filters">
+                <h3>Fuentes de Noticias:</h3>
+                <div class="filter-buttons">
+                    <button class="filter-btn active" data-source="all">Todas</button>
+                    <button class="filter-btn" data-source="thehackernews">The Hacker News</button>
+                    <button class="filter-btn" data-source="krebs">Krebs on Security</button>
+                    <button class="filter-btn" data-source="darkreading">Dark Reading</button>
+                </div>
+            </div>
 
-                <!-- Artículo Mic-E-Mouse -->
-                <article class="article-card">
-                    <div class="article-meta">
-                        <time datetime="2025-09-16">16 de Septiembre, 2025</time>
-                        <span class="category">Noticias</span>
-                    </div>
-                    <h3><a href="/articles/2025/09-septiembre/Mic-E-Mouse.html">Mic-E-Mouse: Escuchas acústicas mediante sensores de ratón</a></h3>
-                    <p>Investigadores demostraron que sensores ópticos de mice modernos pueden capturar vibraciones de superficie y, mediante IA, reconstruir conversaciones privadas.</p>
-                    <a href="/articles/2025/09-septiembre/Mic-E-Mouse.html" class="read-more">Leer más →</a>
-                </article>                
+            <!-- Loading Spinner -->
+            <div id="loading" class="loading">
+                <div class="spinner"></div>
+                <p>Cargando noticias de ciberseguridad...</p>
+            </div>
 
-                <!-- Artículo LatentCSI -->
-                <article class="article-card">
-                    <div class="article-meta">
-                        <time datetime="2025-09-05">5 de Septiembre, 2025</time>
-                        <span class="category">Noticias</span>
-                    </div>
-                    <h3><a href="/articles/2025/09-septiembre/latentcsi-wifi-generacion-imagenes-ia.html">LatentCSI: Generación de Imágenes de Alta Resolución desde Señales WiFi sin Cámaras</a></h3>
-                    <p>Una investigación del Institute of Science Tokyo demostró que las señales WiFi pueden utilizarse para reconstruir imágenes de personas y espacios sin cámaras ni acceso físico, aprovechando solo las ondas inalámbricas que ya atraviesan los entornos. Utilizando equipos comerciales estándar y una inteligencia artificial capaz de interpretar las variaciones de las señales WiFi, los investigadores lograron identificar posición, movimiento y forma humana dentro de habitaciones cerradas.</p>
-                    <a href="/articles/2025/09-septiembre/latentcsi-wifi-generacion-imagenes-ia.html" class="read-more">Leer análisis completo →</a>
-                </article>
+            <!-- News Grid -->
+            <div id="news-container" class="news-grid">
+                <!-- Las noticias se cargarán aquí dinámicamente -->
+            </div>
 
-                <!-- Placeholder para futuras noticias -->
-                <article class="article-card">
-                    <div class="article-meta">
-                        <time datetime="2025-10-21">Próximamente</time>
-                        <span class="category">Noticias</span>
-                    </div>
-                    <h3>Más Noticias Próximamente</h3>
-                    <p>Continuaré publicando análisis y noticias sobre:</p>
-                    <ul>
-                        <li>Vulnerabilidades críticas recién descubiertas</li>
-                        <li>Ataques cibernéticos de alto impacto</li>
-                        <li>Nuevas regulaciones de ciberseguridad</li>
-                        <li>Tendencias en amenazas y vectores de ataque</li>
-                        <li>Actualizaciones de seguridad importantes</li>
-                    </ul>
-                </article>
-            </section>
+            <!-- Error Message -->
+            <div id="error-message" class="error-message" style="display: none;">
+                <h3>⚠️ Error al cargar noticias</h3>
+                <p>No se pudieron cargar las noticias en este momento. Por favor, intenta más tarde.</p>
+            </div>
 
             <!-- Sidebar -->
-            <aside class="sidebar">
-                <section class="categories-widget">
-                    <h3>Otras Categorías</h3>
-                    <ul>
+            <aside class="news-sidebar">
+                <section class="sidebar-widget">
+                    <h3>🔒 Sobre las Fuentes</h3>
+                    <div class="source-info">
+                        <h4>The Hacker News</h4>
+                        <p>Portal líder en noticias de ciberseguridad, vulnerabilidades y amenazas.</p>
+                    </div>
+                    <div class="source-info">
+                        <h4>Krebs on Security</h4>
+                        <p>Análisis profundo de Brian Krebs sobre crimen cibernético y seguridad.</p>
+                    </div>
+                    <div class="source-info">
+                        <h4>Dark Reading</h4>
+                        <p>Noticias corporativas sobre seguridad de la información empresarial.</p>
+                    </div>
+                </section>
+
+                <section class="sidebar-widget">
+                    <h3>🔐 Clasificación CIA+NR</h3>
+                    <p style="font-size: 0.875rem; color: var(--text-secondary); margin-bottom: 1rem;">
+                        Las noticias se clasifican automáticamente según el tipo de riesgo:
+                    </p>
+                    <ul class="cia-legend">
+                        <li>
+                            <span class="cia-tag cia-confidentiality">🔒 Confidencialidad</span>
+                            <span class="cia-desc">Robo o exposición de datos</span>
+                        </li>
+                        <li>
+                            <span class="cia-tag cia-integrity">✅ Integridad</span>
+                            <span class="cia-desc">Malware, modificación de datos</span>
+                        </li>
+                        <li>
+                            <span class="cia-tag cia-availability">⚡ Disponibilidad</span>
+                            <span class="cia-desc">DDoS, interrupciones de servicio</span>
+                        </li>
+                        <li>
+                            <span class="cia-tag cia-non-repudiation">📝 No Repudio</span>
+                            <span class="cia-desc">Fraude, suplantación de identidad</span>
+                        </li>
+                    </ul>
+                </section>
+
+                <section class="sidebar-widget">
+                    <h3>📌 Categorías Populares</h3>
+                    <ul class="popular-tags">
+                        <li><a href="#" data-tag="vulnerabilities">Vulnerabilidades</a></li>
+                        <li><a href="#" data-tag="ransomware">Ransomware</a></li>
+                        <li><a href="#" data-tag="data-breach">Data Breach</a></li>
+                        <li><a href="#" data-tag="malware">Malware</a></li>
+                        <li><a href="#" data-tag="zero-day">Zero-Day</a></li>
+                    </ul>
+                </section>
+
+                <section class="sidebar-widget">
+                    <h3>📚 Otras Secciones</h3>
+                    <ul class="popular-tags">
                         <li><a href="/categories/trabajos-investigacion.html">🔬 Investigación</a></li>
                         <li><a href="/categories/frameworks.html">🛡️ Frameworks</a></li>
                         <li><a href="/">🏠 Inicio</a></li>
                     </ul>
-                </section>
-
-                <section class="about-widget">
-                    <h3>Sobre el Autor</h3>
-                    <p>Arquitecto de Ciberseguridad con más de 10 años de experiencia. CISM, ISO27001 Lead Auditor, Master en Cybersecurity Management.</p>
-                    <a href="/about/" class="btn-secondary">Conoce más</a>
                 </section>
             </aside>
         </div>
@@ -164,11 +201,13 @@
             
             <div class="footer-bottom">
                 <p>&copy; 2025 Herliss Briceño. Todos los derechos reservados.</p>
-                <p class="footer-tech">Construido con seguridad en mente | Hospedado en GitHub Pages</p>
+                <p class="footer-tech">Noticias obtenidas de fuentes públicas RSS | Sin cookies ni tracking</p>
             </div>
         </div>
     </footer>
 
+    <!-- Scripts -->
     <script src="/assets/js/main.js" defer></script>
+    <script src="/assets/js/news.js" defer></script>
 </body>
 </html>
