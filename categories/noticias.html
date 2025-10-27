@@ -434,8 +434,8 @@
 
     <!-- Scripts -->
     <script src="/assets/js/main.js" defer></script>
-    <script src="/assets/js/news-advanced-filters.js" defer></script>
-    <script src="/assets/js/news.js" defer></script>
+    <script src="/assets/js/news-advanced-filters.js"></script>
+    <script src="/assets/js/news-integrated.js"></script>
     
     <!-- Script para Toggle de Filtros Avanzados -->
     <script>
@@ -451,6 +451,24 @@
                 this.innerHTML = isVisible 
                     ? '<span class="icon">⚙️</span> Mostrar Filtros Avanzados de CISO'
                     : '<span class="icon">❌</span> Ocultar Filtros Avanzados';
+            });
+        }
+        
+        // Actualizar valor del slider CVSS
+        const cvssSlider = document.getElementById('filter-min-cvss');
+        const cvssValue = document.getElementById('cvss-value');
+        if (cvssSlider && cvssValue) {
+            cvssSlider.addEventListener('input', function() {
+                cvssValue.textContent = parseFloat(this.value).toFixed(1);
+            });
+        }
+        
+        // Actualizar valor del slider Relevancia
+        const relevanceSlider = document.getElementById('filter-min-relevance');
+        const relevanceValue = document.getElementById('relevance-value');
+        if (relevanceSlider && relevanceValue) {
+            relevanceSlider.addEventListener('input', function() {
+                relevanceValue.textContent = this.value + '%';
             });
         }
     });
