@@ -197,14 +197,32 @@ async function loadAllNews() {
             throw new Error('No se encontraron noticias');
         }
         
-        // Ordenar por fecha (más reciente primero)
-        allArticles.sort((a, b) => new Date(b.pubDate) - new Date(a.pubDate));
+        // NUEVO: Enriquecer cada artículo con metadata avanzada
+        if (window.AdvancedFilters) {
+            allArticles = allArticles.map(article => 
+                window.AdvancedFilters.enrichArticleMetadata(article)
+            );
+            
+            // Ordenar por prioridad de CISO
+            allArticles = window.AdvancedFilters.sortByPriority(allArticles);
+            
+            // Calcular estadísticas
+            const stats = window.AdvancedFilters.calculateMetadataStats(allArticles);
+            console.log('📊 Estadísticas de Metadata:', stats);
+            
+            // Actualizar estadísticas en el sidebar
+            updateMetadataStats(stats);
+        } else {
+            // Fallback: ordenar solo por fecha
+            allArticles.sort((a, b) => new Date(b.pubDate) - new Date(a.pubDate));
+        }
         
         // Guardar en memoria para filtros
         window.newsData = allArticles;
+        window.unfilteredNewsData = [...allArticles]; // Copia sin filtrar
         
         // Mostrar contador de noticias cargadas
-        console.log(`✅ ${allArticles.length} noticias cargadas de ${Object.keys(NEWS_SOURCES).length} fuentes`);
+        console.log(`✅ ${allArticles.length} noticias cargadas y enriquecidas`);
         
         // Renderizar noticias
         renderNews(allArticles);
@@ -407,6 +425,73 @@ function createNewsCard(article) {
         </span>
     `).join('');
     
+    // NUEVO: Generar badges de metadata (CVE, CVSS, Threat Actors, etc.)
+    let metadataBadgesHTML = '';
+    if (article.metadata) {
+        const meta = article.metadata;
+        const badges = [];
+        
+        // Relevance Score
+        if (meta.relevanceScore >= 80) {
+            badges.push(`<span class="meta-badge priority-high" title="Alta Prioridad">⭐ ${meta.relevanceScore}%</span>`);
+        } else if (meta.relevanceScore >= 50) {
+            badges.push(`<span class="meta-badge priority-medium" title="Prioridad Media">📊 ${meta.relevanceScore}%</span>`);
+        }
+        
+        // CVEs
+        if (meta.cves.length > 0) {
+            badges.push(`<span class="meta-badge cve-badge" title="${meta.cves.join(', ')}">${meta.cves.length} CVE${meta.cves.length > 1 ? 's' : ''}</span>`);
+        }
+        
+        // CVSS Score
+        if (meta.cvssScore !== null) {
+            const cvssClass = meta.cvssScore >= 9.0 ? 'critical' : meta.cvssScore >= 7.0 ? 'high' : 'medium';
+            badges.push(`<span class="meta-badge cvss-${cvssClass}" title="CVSS Score">CVSS: ${meta.cvssScore.toFixed(1)}</span>`);
+        }
+        
+        // Threat Actors
+        if (meta.threatActors.length > 0) {
+            badges.push(`<span class="meta-badge threat-actor" title="${meta.threatActors.join(', ')}">👤 ${meta.threatActors[0]}${meta.threatActors.length > 1 ? ' +' + (meta.threatActors.length - 1) : ''}</span>`);
+        }
+        
+        // Productos Afectados
+        if (meta.affectedProducts.length > 0) {
+            badges.push(`<span class="meta-badge product-badge" title="${meta.affectedProducts.join(', ')}">💻 ${meta.affectedProducts.length} Productos</span>`);
+        }
+        
+        // Parche Disponible
+        if (meta.patchAvailable) {
+            badges.push(`<span class="meta-badge patch-available" title="Parche Disponible">✅ Parche</span>`);
+        }
+        
+        // IOCs
+        const totalIOCs = meta.iocs.ips.length + meta.iocs.hashes.length + meta.iocs.domains.length;
+        if (totalIOCs > 0) {
+            badges.push(`<span class="meta-badge ioc-badge" title="Indicadores de Compromiso">🔍 ${totalIOCs} IOCs</span>`);
+        }
+        
+        // MITRE ATT&CK
+        if (meta.mitreAttackTechniques.length > 0) {
+            badges.push(`<span class="meta-badge mitre-badge" title="${meta.mitreAttackTechniques.join(', ')}">🎯 ${meta.mitreAttackTechniques.length} MITRE</span>`);
+        }
+        
+        // Fuente Oficial
+        if (meta.isOfficialSource) {
+            badges.push(`<span class="meta-badge official-source" title="Fuente Oficial">✓ Oficial</span>`);
+        }
+        
+        // Regulatorio
+        if (meta.regulatoryKeywords.length > 0) {
+            badges.push(`<span class="meta-badge regulatory" title="${meta.regulatoryKeywords.join(', ')}">📋 Regulatorio</span>`);
+        }
+        
+        metadataBadgesHTML = badges.length > 0 ? `
+            <div class="metadata-badges">
+                ${badges.join('')}
+            </div>
+        ` : '';
+    }
+    
     card.innerHTML = `
         <div class="news-card-header">
             <div class="header-left">
@@ -421,6 +506,8 @@ function createNewsCard(article) {
                 ${ciaTagsHTML}
             </div>
         </div>
+        
+        ${metadataBadgesHTML}
         
         ${thumbnail ? `
             <div class="news-image">
@@ -456,6 +543,51 @@ function createNewsCard(article) {
 }
 
 // ============================================
+// ACTUALIZAR ESTADÍSTICAS DE METADATA
+// ============================================
+function updateMetadataStats(stats) {
+    // Actualizar contador de noticias con CVE
+    const cveCountEl = document.getElementById('stat-cve-count');
+    if (cveCountEl) cveCountEl.textContent = stats.withCVE;
+    
+    // Actualizar contador de noticias críticas
+    const criticalCountEl = document.getElementById('stat-critical-count');
+    if (criticalCountEl) criticalCountEl.textContent = stats.critical;
+    
+    // Actualizar score promedio de relevancia
+    const avgScoreEl = document.getElementById('stat-avg-score');
+    if (avgScoreEl) avgScoreEl.textContent = `${stats.avgRelevanceScore}%`;
+    
+    // Actualizar contador de IOCs
+    const iocCountEl = document.getElementById('stat-ioc-count');
+    if (iocCountEl) iocCountEl.textContent = stats.withIOCs;
+    
+    // Actualizar top threat actors
+    const topThreatsEl = document.getElementById('top-threat-actors');
+    if (topThreatsEl) {
+        const sorted = Object.entries(stats.topThreatActors)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 5);
+        
+        topThreatsEl.innerHTML = sorted.length > 0 
+            ? sorted.map(([name, count]) => `<li>👤 ${name} (${count})</li>`).join('')
+            : '<li>Sin amenazas detectadas</li>';
+    }
+    
+    // Actualizar top productos
+    const topProductsEl = document.getElementById('top-products');
+    if (topProductsEl) {
+        const sorted = Object.entries(stats.topProducts)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 5);
+        
+        topProductsEl.innerHTML = sorted.length > 0
+            ? sorted.map(([name, count]) => `<li>💻 ${name} (${count})</li>`).join('')
+            : '<li>Sin productos detectados</li>';
+    }
+}
+
+// ============================================
 // SISTEMA DE FILTROS
 // ============================================
 function initFilters() {
@@ -479,6 +611,220 @@ function initFilters() {
             }
         });
     });
+    
+    // NUEVO: Inicializar filtros avanzados de CISO
+    initAdvancedFilters();
+}
+
+// ============================================
+// FILTROS AVANZADOS DE CISO
+// ============================================
+function initAdvancedFilters() {
+    // Filtro: Solo con CVE
+    const cveCheckbox = document.getElementById('filter-only-cve');
+    if (cveCheckbox) {
+        cveCheckbox.addEventListener('change', applyCurrentFilters);
+    }
+    
+    // Filtro: CVSS mínimo
+    const cvssSlider = document.getElementById('filter-min-cvss');
+    const cvssValue = document.getElementById('cvss-value');
+    if (cvssSlider && cvssValue) {
+        cvssSlider.addEventListener('input', function() {
+            cvssValue.textContent = this.value;
+            applyCurrentFilters();
+        });
+    }
+    
+    // Filtro: Solo con parche
+    const patchCheckbox = document.getElementById('filter-only-patch');
+    if (patchCheckbox) {
+        patchCheckbox.addEventListener('change', applyCurrentFilters);
+    }
+    
+    // Filtro: Solo fuentes oficiales
+    const officialCheckbox = document.getElementById('filter-only-official');
+    if (officialCheckbox) {
+        officialCheckbox.addEventListener('change', applyCurrentFilters);
+    }
+    
+    // Filtro: Últimos N días
+    const daysSelect = document.getElementById('filter-max-days');
+    if (daysSelect) {
+        daysSelect.addEventListener('change', applyCurrentFilters);
+    }
+    
+    // Filtro: Nivel de severidad
+    const severitySelect = document.getElementById('filter-severity');
+    if (severitySelect) {
+        severitySelect.addEventListener('change', applyCurrentFilters);
+    }
+    
+    // Filtro: Relevance score mínimo
+    const relevanceSlider = document.getElementById('filter-min-relevance');
+    const relevanceValue = document.getElementById('relevance-value');
+    if (relevanceSlider && relevanceValue) {
+        relevanceSlider.addEventListener('input', function() {
+            relevanceValue.textContent = this.value + '%';
+            applyCurrentFilters();
+        });
+    }
+    
+    // Filtro: Solo con IOCs
+    const iocCheckbox = document.getElementById('filter-only-iocs');
+    if (iocCheckbox) {
+        iocCheckbox.addEventListener('change', applyCurrentFilters);
+    }
+    
+    // Filtro: Solo regulatorio
+    const regulatoryCheckbox = document.getElementById('filter-only-regulatory');
+    if (regulatoryCheckbox) {
+        regulatoryCheckbox.addEventListener('change', applyCurrentFilters);
+    }
+    
+    // Botón: Limpiar filtros
+    const clearButton = document.getElementById('clear-advanced-filters');
+    if (clearButton) {
+        clearButton.addEventListener('click', clearAdvancedFilters);
+    }
+    
+    // Botón: Aplicar filtros (redundante pero útil para UX)
+    const applyButton = document.getElementById('apply-advanced-filters');
+    if (applyButton) {
+        applyButton.addEventListener('click', applyCurrentFilters);
+    }
+}
+
+function applyCurrentFilters() {
+    if (!window.unfilteredNewsData || !window.AdvancedFilters) return;
+    
+    // Construir objeto de filtros
+    const filters = {};
+    
+    // Solo con CVE
+    const cveCheckbox = document.getElementById('filter-only-cve');
+    if (cveCheckbox && cveCheckbox.checked) {
+        filters.onlyWithCVE = true;
+    }
+    
+    // CVSS mínimo
+    const cvssSlider = document.getElementById('filter-min-cvss');
+    if (cvssSlider && cvssSlider.value > 0) {
+        filters.minCVSS = parseFloat(cvssSlider.value);
+    }
+    
+    // Solo con parche
+    const patchCheckbox = document.getElementById('filter-only-patch');
+    if (patchCheckbox && patchCheckbox.checked) {
+        filters.onlyWithPatch = true;
+    }
+    
+    // Solo fuentes oficiales
+    const officialCheckbox = document.getElementById('filter-only-official');
+    if (officialCheckbox && officialCheckbox.checked) {
+        filters.onlyOfficialSources = true;
+    }
+    
+    // Últimos N días
+    const daysSelect = document.getElementById('filter-max-days');
+    if (daysSelect && daysSelect.value !== 'all') {
+        filters.maxDaysOld = parseInt(daysSelect.value);
+    }
+    
+    // Nivel de severidad
+    const severitySelect = document.getElementById('filter-severity');
+    if (severitySelect && severitySelect.value !== 'all') {
+        filters.severityLevel = severitySelect.value;
+    }
+    
+    // Relevance score mínimo
+    const relevanceSlider = document.getElementById('filter-min-relevance');
+    if (relevanceSlider && relevanceSlider.value > 0) {
+        filters.minRelevanceScore = parseInt(relevanceSlider.value);
+    }
+    
+    // Solo con IOCs
+    const iocCheckbox = document.getElementById('filter-only-iocs');
+    if (iocCheckbox && iocCheckbox.checked) {
+        filters.onlyWithIOCs = true;
+    }
+    
+    // Solo regulatorio
+    const regulatoryCheckbox = document.getElementById('filter-only-regulatory');
+    if (regulatoryCheckbox && regulatoryCheckbox.checked) {
+        filters.onlyRegulatory = true;
+    }
+    
+    // Aplicar filtros
+    let filtered = window.AdvancedFilters.applyAdvancedFilters(
+        window.unfilteredNewsData, 
+        filters
+    );
+    
+    // Guardar en memoria
+    window.newsData = filtered;
+    
+    // Actualizar contador
+    const countEl = document.getElementById('filtered-count');
+    if (countEl) {
+        countEl.textContent = `${filtered.length} de ${window.unfilteredNewsData.length}`;
+    }
+    
+    // Renderizar
+    renderNews(filtered);
+    
+    console.log(`🔍 Filtros aplicados: ${filtered.length} noticias mostradas`, filters);
+}
+
+function clearAdvancedFilters() {
+    // Limpiar todos los controles
+    const cveCheckbox = document.getElementById('filter-only-cve');
+    if (cveCheckbox) cveCheckbox.checked = false;
+    
+    const cvssSlider = document.getElementById('filter-min-cvss');
+    const cvssValue = document.getElementById('cvss-value');
+    if (cvssSlider && cvssValue) {
+        cvssSlider.value = 0;
+        cvssValue.textContent = '0.0';
+    }
+    
+    const patchCheckbox = document.getElementById('filter-only-patch');
+    if (patchCheckbox) patchCheckbox.checked = false;
+    
+    const officialCheckbox = document.getElementById('filter-only-official');
+    if (officialCheckbox) officialCheckbox.checked = false;
+    
+    const daysSelect = document.getElementById('filter-max-days');
+    if (daysSelect) daysSelect.value = 'all';
+    
+    const severitySelect = document.getElementById('filter-severity');
+    if (severitySelect) severitySelect.value = 'all';
+    
+    const relevanceSlider = document.getElementById('filter-min-relevance');
+    const relevanceValue = document.getElementById('relevance-value');
+    if (relevanceSlider && relevanceValue) {
+        relevanceSlider.value = 0;
+        relevanceValue.textContent = '0%';
+    }
+    
+    const iocCheckbox = document.getElementById('filter-only-iocs');
+    if (iocCheckbox) iocCheckbox.checked = false;
+    
+    const regulatoryCheckbox = document.getElementById('filter-only-regulatory');
+    if (regulatoryCheckbox) regulatoryCheckbox.checked = false;
+    
+    // Restaurar todas las noticias
+    if (window.unfilteredNewsData) {
+        window.newsData = [...window.unfilteredNewsData];
+        renderNews(window.newsData);
+        
+        const countEl = document.getElementById('filtered-count');
+        if (countEl) {
+            countEl.textContent = `${window.newsData.length} de ${window.unfilteredNewsData.length}`;
+        }
+    }
+    
+    console.log('🔄 Filtros limpiados');
 }
 
 function filterNewsBySource(source) {

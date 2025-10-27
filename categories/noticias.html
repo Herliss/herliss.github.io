@@ -7,16 +7,16 @@
     
     <!-- SEO Meta Tags -->
     <title>Noticias de Ciberseguridad | Herliss Briceño</title>
-    <meta name="description" content="Últimas noticias y actualizaciones sobre ciberseguridad, vulnerabilidades, amenazas y tendencias en seguridad informática.">
-    <meta name="keywords" content="noticias ciberseguridad, vulnerabilidades, amenazas, hacking, seguridad informática">
+    <meta name="description" content="Últimas noticias y actualizaciones sobre ciberseguridad, vulnerabilidades, amenazas y tendencias en seguridad informática de múltiples fuentes globales con filtros avanzados de CISO.">
+    <meta name="keywords" content="noticias ciberseguridad, vulnerabilidades, CVE, CVSS, amenazas, hacking, seguridad informática, CISA, Microsoft Security, Google Security, threat intelligence, IOCs, MITRE ATT&CK">
     <meta name="author" content="Herliss Briceño">
     <meta name="robots" content="index, follow">
     
     <!-- Open Graph -->
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://www.herlissbriceno.com/categories/noticias.html">
-    <meta property="og:title" content="Noticias de Ciberseguridad">
-    <meta property="og:description" content="Últimas noticias sobre ciberseguridad e inteligencia artificial">
+    <meta property="og:title" content="Noticias de Ciberseguridad con Filtros Avanzados">
+    <meta property="og:description" content="Plataforma de inteligencia de amenazas con 16 fuentes RSS, extracción de CVEs, CVSS, Threat Actors e IOCs">
     
     <!-- Security Headers -->
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://api.rss2json.com;">
@@ -30,6 +30,7 @@
     <!-- Stylesheets -->
     <link rel="stylesheet" href="/assets/css/main.css">
     <link rel="stylesheet" href="/assets/css/news.css">
+    <link rel="stylesheet" href="/assets/css/news-advanced.css">
 </head>
 <body>
     <!-- Header -->
@@ -63,7 +64,7 @@
     <section class="hero-news">
         <div class="container">
             <h1>📰 Noticias de Ciberseguridad</h1>
-            <p>Últimas actualizaciones sobre vulnerabilidades, amenazas y tendencias en seguridad informática</p>
+            <p>Plataforma de inteligencia de amenazas con 16 fuentes globales | Extracción automática de CVEs, CVSS, Threat Actors e IOCs</p>
         </div>
     </section>
 
@@ -71,21 +72,150 @@
     <main class="news-content">
         <div class="container">
             
-            <!-- Filtros de Fuentes -->
+            <!-- Filtros por Categoría -->
             <div class="news-filters">
-                <h3>Fuentes de Noticias:</h3>
+                <h3>🗂️ Filtrar por Categoría:</h3>
                 <div class="filter-buttons">
-                    <button class="filter-btn active" data-source="all">Todas</button>
-                    <button class="filter-btn" data-source="thehackernews">The Hacker News</button>
-                    <button class="filter-btn" data-source="krebs">Krebs on Security</button>
-                    <button class="filter-btn" data-source="darkreading">Dark Reading</button>
+                    <button class="filter-btn active" data-filter="category" data-category="all">Todas las Fuentes</button>
+                    <button class="filter-btn" data-filter="category" data-category="general">📰 Noticias Generales</button>
+                    <button class="filter-btn" data-filter="category" data-category="intelligence">🛡️ Inteligencia de Amenazas</button>
+                    <button class="filter-btn" data-filter="category" data-category="corporate">🏢 Blogs Corporativos</button>
+                </div>
+            </div>
+
+            <!-- Filtros de Fuentes Individuales -->
+            <div class="news-filters">
+                <h3>📡 Filtrar por Fuente Individual:</h3>
+                <div class="filter-buttons">
+                    <!-- Noticias Generales -->
+                    <button class="filter-btn" data-filter="source" data-source="thehackernews">The Hacker News</button>
+                    <button class="filter-btn" data-filter="source" data-source="bleepingcomputer">BleepingComputer</button>
+                    <button class="filter-btn" data-filter="source" data-source="securityweek">SecurityWeek</button>
+                    <button class="filter-btn" data-filter="source" data-source="darkreading">Dark Reading</button>
+                    <button class="filter-btn" data-filter="source" data-source="krebs">Krebs on Security</button>
+                    <button class="filter-btn" data-filter="source" data-source="scmagazine">SC Magazine</button>
+                    <button class="filter-btn" data-filter="source" data-source="cybernews">Cybernews</button>
+                    
+                    <!-- Inteligencia -->
+                    <button class="filter-btn" data-filter="source" data-source="uscert">US-CERT (CISA)</button>
+                    <button class="filter-btn" data-filter="source" data-source="talos">Talos Intelligence</button>
+                    <button class="filter-btn" data-filter="source" data-source="virustotal">VirusTotal Blog</button>
+                    
+                    <!-- Corporativos -->
+                    <button class="filter-btn" data-filter="source" data-source="googlecloud">Google Cloud Security</button>
+                    <button class="filter-btn" data-filter="source" data-source="microsoft">Microsoft Security</button>
+                    <button class="filter-btn" data-filter="source" data-source="cisco">Cisco Security</button>
+                    <button class="filter-btn" data-filter="source" data-source="paloalto">Palo Alto Unit42</button>
+                    <button class="filter-btn" data-filter="source" data-source="crowdstrike">CrowdStrike</button>
+                    <button class="filter-btn" data-filter="source" data-source="mandiant">Mandiant</button>
+                </div>
+            </div>
+
+            <!-- Botón para Toggle Filtros Avanzados -->
+            <button class="toggle-advanced-btn" id="toggle-advanced-filters">
+                <span class="icon">⚙️</span>
+                Mostrar Filtros Avanzados de CISO
+            </button>
+
+            <!-- Panel de Filtros Avanzados -->
+            <div class="advanced-filters-panel" id="advanced-filters" style="display: none;">
+                <h3>🔍 Filtros Avanzados para CISO</h3>
+                <p class="subtitle">Priorización basada en relevancia técnica, inteligencia de amenazas y contexto estratégico</p>
+                
+                <div class="filters-grid">
+                    <!-- Relevancia Técnica y Táctica -->
+                    <div class="filter-group">
+                        <label>
+                            <input type="checkbox" id="filter-only-cve">
+                            📋 Solo noticias con CVE
+                        </label>
+                    </div>
+                    
+                    <div class="filter-group">
+                        <label>
+                            🎚️ CVSS Mínimo: <span id="cvss-value" class="range-value">0.0</span>
+                        </label>
+                        <input type="range" id="filter-min-cvss" min="0" max="10" step="0.1" value="0">
+                    </div>
+                    
+                    <div class="filter-group">
+                        <label>
+                            <input type="checkbox" id="filter-only-patch">
+                            ✅ Solo con parche disponible
+                        </label>
+                    </div>
+                    
+                    <!-- Inteligencia de Amenazas -->
+                    <div class="filter-group">
+                        <label>
+                            <input type="checkbox" id="filter-only-iocs">
+                            🔍 Solo con IOCs (IPs, hashes, dominios)
+                        </label>
+                    </div>
+                    
+                    <div class="filter-group">
+                        <label>
+                            <input type="checkbox" id="filter-only-official">
+                            ✓ Solo fuentes oficiales (CISA, Microsoft, etc.)
+                        </label>
+                    </div>
+                    
+                    <!-- Contexto Estratégico -->
+                    <div class="filter-group">
+                        <label>
+                            <input type="checkbox" id="filter-only-regulatory">
+                            📋 Solo temas regulatorios (DORA, NIS2, ISO 27001)
+                        </label>
+                    </div>
+                    
+                    <div class="filter-group">
+                        <label for="filter-severity">⚠️ Nivel de Severidad</label>
+                        <select id="filter-severity">
+                            <option value="all">Todas</option>
+                            <option value="critical">Crítico</option>
+                            <option value="high">Alto</option>
+                            <option value="medium">Medio</option>
+                            <option value="low">Bajo</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Valor Informativo -->
+                    <div class="filter-group">
+                        <label>
+                            ⭐ Relevancia Mínima: <span id="relevance-value" class="range-value">0%</span>
+                        </label>
+                        <input type="range" id="filter-min-relevance" min="0" max="100" step="5" value="0">
+                    </div>
+                    
+                    <div class="filter-group">
+                        <label for="filter-max-days">📅 Publicadas en los últimos</label>
+                        <select id="filter-max-days">
+                            <option value="all">Todas</option>
+                            <option value="1">1 día</option>
+                            <option value="7" selected>7 días</option>
+                            <option value="30">30 días</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <!-- Acciones -->
+                <div class="filter-actions">
+                    <div class="filter-count">
+                        Mostrando: <strong id="filtered-count">0 de 0</strong> noticias
+                    </div>
+                    <button class="btn-filter btn-clear" id="clear-advanced-filters">
+                        🔄 Limpiar Filtros
+                    </button>
+                    <button class="btn-filter btn-apply" id="apply-advanced-filters">
+                        ✓ Aplicar Filtros
+                    </button>
                 </div>
             </div>
 
             <!-- Loading Spinner -->
             <div id="loading" class="loading">
                 <div class="spinner"></div>
-                <p>Cargando noticias de ciberseguridad...</p>
+                <p>Cargando y enriqueciendo noticias de 16 fuentes globales con metadata de seguridad...</p>
             </div>
 
             <!-- News Grid -->
@@ -101,20 +231,99 @@
 
             <!-- Sidebar -->
             <aside class="news-sidebar">
+                <!-- Estadísticas de Metadata -->
                 <section class="sidebar-widget">
-                    <h3>🔒 Sobre las Fuentes</h3>
-                    <div class="source-info">
-                        <h4>The Hacker News</h4>
-                        <p>Portal líder en noticias de ciberseguridad, vulnerabilidades y amenazas.</p>
+                    <h3>📊 Estadísticas de Metadata</h3>
+                    
+                    <div class="metadata-stats">
+                        <div class="stat-card">
+                            <div class="stat-card-label">Noticias con CVE</div>
+                            <div class="stat-card-value" id="stat-cve-count">0</div>
+                        </div>
+                        
+                        <div class="stat-card critical">
+                            <div class="stat-card-label">Severidad Crítica</div>
+                            <div class="stat-card-value" id="stat-critical-count">0</div>
+                        </div>
+                        
+                        <div class="stat-card">
+                            <div class="stat-card-label">Con IOCs</div>
+                            <div class="stat-card-value" id="stat-ioc-count">0</div>
+                        </div>
+                        
+                        <div class="stat-card">
+                            <div class="stat-card-label">Relevancia Promedio</div>
+                            <div class="stat-card-value" id="stat-avg-score">0%</div>
+                        </div>
                     </div>
-                    <div class="source-info">
-                        <h4>Krebs on Security</h4>
-                        <p>Análisis profundo de Brian Krebs sobre crimen cibernético y seguridad.</p>
+                </section>
+
+                <!-- Top Threat Actors -->
+                <section class="sidebar-widget">
+                    <h3>👤 Top Threat Actors</h3>
+                    <ul class="top-list" id="top-threat-actors">
+                        <li>Cargando...</li>
+                    </ul>
+                </section>
+
+                <!-- Top Productos Afectados -->
+                <section class="sidebar-widget">
+                    <h3>💻 Top Productos Afectados</h3>
+                    <ul class="top-list" id="top-products">
+                        <li>Cargando...</li>
+                    </ul>
+                </section>
+
+                <section class="sidebar-widget">
+                    <h3>📊 Estadísticas Generales</h3>
+                    <div class="stats-container">
+                        <div class="stat-item">
+                            <span class="stat-number">16</span>
+                            <span class="stat-label">Fuentes RSS</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-number">3</span>
+                            <span class="stat-label">Categorías</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-number">10min</span>
+                            <span class="stat-label">Auto-refresh</span>
+                        </div>
                     </div>
-                    <div class="source-info">
-                        <h4>Dark Reading</h4>
-                        <p>Noticias corporativas sobre seguridad de la información empresarial.</p>
-                    </div>
+                </section>
+
+                <section class="sidebar-widget">
+                    <h3>📰 Fuentes - Noticias Generales</h3>
+                    <ul class="source-list">
+                        <li>• The Hacker News</li>
+                        <li>• BleepingComputer</li>
+                        <li>• SecurityWeek</li>
+                        <li>• Dark Reading</li>
+                        <li>• Krebs on Security</li>
+                        <li>• SC Magazine</li>
+                        <li>• Cybernews</li>
+                    </ul>
+                </section>
+
+                <section class="sidebar-widget">
+                    <h3>🛡️ Fuentes - Inteligencia</h3>
+                    <ul class="source-list">
+                        <li>• US-CERT (CISA)</li>
+                        <li>• Talos Intelligence Blog</li>
+                        <li>• VirusTotal Blog</li>
+                    </ul>
+                </section>
+
+                <section class="sidebar-widget">
+                    <h3>🏢 Fuentes - Corporativas</h3>
+                    <ul class="source-list">
+                        <li>• Google Cloud Security</li>
+                        <li>• Microsoft Security</li>
+                        <li>• Cisco Security Blog</li>
+                        <li>• Palo Alto Unit42</li>
+                        <li>• CrowdStrike Blog</li>
+                        <li>• Mandiant</li>
+                    </ul>
                 </section>
 
                 <section class="sidebar-widget">
@@ -143,13 +352,16 @@
                 </section>
 
                 <section class="sidebar-widget">
-                    <h3>📌 Categorías Populares</h3>
+                    <h3>🔍 Categorías Populares</h3>
                     <ul class="popular-tags">
-                        <li><a href="#" data-tag="vulnerabilities">Vulnerabilidades</a></li>
+                        <li><a href="#" data-tag="vulnerability">Vulnerabilidades</a></li>
                         <li><a href="#" data-tag="ransomware">Ransomware</a></li>
-                        <li><a href="#" data-tag="data-breach">Data Breach</a></li>
+                        <li><a href="#" data-tag="breach">Data Breach</a></li>
                         <li><a href="#" data-tag="malware">Malware</a></li>
                         <li><a href="#" data-tag="zero-day">Zero-Day</a></li>
+                        <li><a href="#" data-tag="phishing">Phishing</a></li>
+                        <li><a href="#" data-tag="apt">APT</a></li>
+                        <li><a href="#" data-tag="exploit">Exploit</a></li>
                     </ul>
                 </section>
 
@@ -160,6 +372,20 @@
                         <li><a href="/categories/frameworks.html">🛡️ Frameworks</a></li>
                         <li><a href="/">🏠 Inicio</a></li>
                     </ul>
+                </section>
+
+                <section class="sidebar-widget">
+                    <h3>ℹ️ Acerca de</h3>
+                    <p style="font-size: 0.875rem; color: var(--text-secondary); line-height: 1.6;">
+                        Este agregador de noticias recopila información de 16 fuentes confiables de ciberseguridad en tiempo real. Todas las noticias se enriquecen automáticamente con metadata (CVEs, CVSS, Threat Actors, IOCs, MITRE ATT&CK) y se clasifican según el modelo CIA+NR para facilitar su análisis.
+                    </p>
+                    <p style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 1rem;">
+                        🔄 Actualización automática cada 10 minutos<br>
+                        🔒 Sin cookies ni tracking<br>
+                        🌐 Fuentes RSS públicas<br>
+                        🎯 Extracción automática de metadata<br>
+                        ⭐ Sistema de scoring de relevancia
+                    </p>
                 </section>
             </aside>
         </div>
@@ -201,13 +427,33 @@
             
             <div class="footer-bottom">
                 <p>&copy; 2025 Herliss Briceño. Todos los derechos reservados.</p>
-                <p class="footer-tech">Noticias obtenidas de fuentes públicas RSS | Sin cookies ni tracking</p>
+                <p class="footer-tech">16 fuentes RSS con extracción de CVEs, CVSS, Threat Actors e IOCs | Sin cookies ni tracking | Actualización automática cada 10 min</p>
             </div>
         </div>
     </footer>
 
     <!-- Scripts -->
     <script src="/assets/js/main.js" defer></script>
+    <script src="/assets/js/news-advanced-filters.js" defer></script>
     <script src="/assets/js/news.js" defer></script>
+    
+    <!-- Script para Toggle de Filtros Avanzados -->
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Toggle para mostrar/ocultar panel de filtros avanzados
+        const toggleBtn = document.getElementById('toggle-advanced-filters');
+        const advancedPanel = document.getElementById('advanced-filters');
+        
+        if (toggleBtn && advancedPanel) {
+            toggleBtn.addEventListener('click', function() {
+                const isVisible = advancedPanel.style.display === 'block';
+                advancedPanel.style.display = isVisible ? 'none' : 'block';
+                this.innerHTML = isVisible 
+                    ? '<span class="icon">⚙️</span> Mostrar Filtros Avanzados de CISO'
+                    : '<span class="icon">❌</span> Ocultar Filtros Avanzados';
+            });
+        }
+    });
+    </script>
 </body>
 </html>
