@@ -203,65 +203,12 @@
 
             <!-- Sidebar -->
             <aside class="news-sidebar">
-                <!-- Estadísticas de Metadata -->
-                <section class="sidebar-widget">
-                    <h3>📊 Estadísticas de Metadata</h3>
-                    
-                    <div class="metadata-stats">
-                        <div class="stat-card">
-                            <div class="stat-card-label">Noticias con CVE</div>
-                            <div class="stat-card-value" id="stat-cve-count">0</div>
-                        </div>
-                        
-                        <div class="stat-card critical">
-                            <div class="stat-card-label">Severidad Crítica</div>
-                            <div class="stat-card-value" id="stat-critical-count">0</div>
-                        </div>
-                        
-                        <div class="stat-card">
-                            <div class="stat-card-label">Con IOCs</div>
-                            <div class="stat-card-value" id="stat-ioc-count">0</div>
-                        </div>
-                        
-                        <div class="stat-card">
-                            <div class="stat-card-label">Relevancia Promedio</div>
-                            <div class="stat-card-value" id="stat-avg-score">0%</div>
-                        </div>
-                    </div>
-                </section>
-
-                <!-- Top Threat Actors -->
-                <section class="sidebar-widget">
-                    <h3>👤 Top Threat Actors</h3>
-                    <ul class="top-list" id="top-threat-actors">
-                        <li>Cargando...</li>
-                    </ul>
-                </section>
-
                 <!-- Top Productos Afectados -->
                 <section class="sidebar-widget">
                     <h3>💻 Top Productos Afectados</h3>
                     <ul class="top-list" id="top-products">
                         <li>Cargando...</li>
                     </ul>
-                </section>
-
-                <section class="sidebar-widget">
-                    <h3>📊 Estadísticas Generales</h3>
-                    <div class="stats-container">
-                        <div class="stat-item">
-                            <span class="stat-number">16</span>
-                            <span class="stat-label">Fuentes RSS</span>
-                        </div>
-                        <div class="stat-item">
-                            <span class="stat-number">3</span>
-                            <span class="stat-label">Categorías</span>
-                        </div>
-                        <div class="stat-item">
-                            <span class="stat-number">10min</span>
-                            <span class="stat-label">Auto-refresh</span>
-                        </div>
-                    </div>
                 </section>
 
                 <section class="sidebar-widget">
@@ -299,31 +246,6 @@
                 </section>
 
                 <section class="sidebar-widget">
-                    <h3>🔐 Clasificación CIA+NR</h3>
-                    <p style="font-size: 0.875rem; color: var(--text-secondary); margin-bottom: 1rem;">
-                        Las noticias se clasifican automáticamente según el tipo de riesgo:
-                    </p>
-                    <ul class="cia-legend">
-                        <li>
-                            <span class="cia-tag cia-confidentiality">🔒 Confidencialidad</span>
-                            <span class="cia-desc">Robo o exposición de datos</span>
-                        </li>
-                        <li>
-                            <span class="cia-tag cia-integrity">✅ Integridad</span>
-                            <span class="cia-desc">Malware, modificación de datos</span>
-                        </li>
-                        <li>
-                            <span class="cia-tag cia-availability">⚡ Disponibilidad</span>
-                            <span class="cia-desc">DDoS, interrupciones de servicio</span>
-                        </li>
-                        <li>
-                            <span class="cia-tag cia-non-repudiation">📝 No Repudio</span>
-                            <span class="cia-desc">Fraude, suplantación de identidad</span>
-                        </li>
-                    </ul>
-                </section>
-
-                <section class="sidebar-widget">
                     <h3>🔍 Categorías Populares</h3>
                     <ul class="popular-tags">
                         <li><a href="#" data-tag="vulnerability">Vulnerabilidades</a></li>
@@ -344,20 +266,6 @@
                         <li><a href="/categories/frameworks.html">🛡️ Frameworks</a></li>
                         <li><a href="/">🏠 Inicio</a></li>
                     </ul>
-                </section>
-
-                <section class="sidebar-widget">
-                    <h3>ℹ️ Acerca de</h3>
-                    <p style="font-size: 0.875rem; color: var(--text-secondary); line-height: 1.6;">
-                        Este agregador de noticias recopila información de 16 fuentes confiables de ciberseguridad en tiempo real. Todas las noticias se enriquecen automáticamente con metadata (CVEs, CVSS, Threat Actors, IOCs, MITRE ATT&CK) y se clasifican según el modelo CIA+NR para facilitar su análisis.
-                    </p>
-                    <p style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 1rem;">
-                        🔄 Actualización automática cada 10 minutos<br>
-                        🔒 Sin cookies ni tracking<br>
-                        🌐 Fuentes RSS públicas<br>
-                        🎯 Extracción automática de metadata<br>
-                        ⭐ Sistema de scoring de relevancia
-                    </p>
                 </section>
             </aside>
         </div>
