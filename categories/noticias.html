@@ -19,7 +19,7 @@
     <meta property="og:description" content="Plataforma de inteligencia de amenazas con 16 fuentes RSS, extracción de CVEs, CVSS, Threat Actors e IOCs">
     
     <!-- Security Headers -->
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://api.rss2json.com;">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://api.allorigins.win https://*.feedburner.com https://*.bleepingcomputer.com https://*.securityweek.com https://*.darkreading.com https://*.krebsonsecurity.com https://*.scmagazine.com https://*.cybernews.com https://*.cisa.gov https://*.talosintelligence.com https://*.virustotal.com https://*.cloud.google.com https://*.microsoft.com https://*.cisco.com https://*.paloaltonetworks.com https://*.crowdstrike.com https://*.mandiant.com;">
     
     <!-- Canonical URL -->
     <link rel="canonical" href="https://www.herlissbriceno.com/categories/noticias.html">
@@ -31,6 +31,7 @@
     <link rel="stylesheet" href="/assets/css/main.css">
     <link rel="stylesheet" href="/assets/css/news.css">
     <link rel="stylesheet" href="/assets/css/news-advanced.css">
+    <link rel="stylesheet" href="/assets/css/news-date-widget.css">
 </head>
 <body>
     <!-- Header -->
@@ -170,22 +171,15 @@
                     </div>
                 </div>
                 
-                <!-- Acciones -->
                 <div class="filter-actions">
-                    <div class="filter-count">
-                        Mostrando: <strong id="filtered-count">0 de 0</strong> noticias
-                    </div>
-                    <button class="btn-filter btn-clear" id="clear-advanced-filters">
-                        🔄 Limpiar Filtros
-                    </button>
-                    <button class="btn-filter btn-apply" id="apply-advanced-filters">
-                        ✓ Aplicar Filtros
-                    </button>
+                    <span class="filter-count">Mostrando: <strong id="filtered-count">0</strong> noticias</span>
+                    <button class="btn-filter btn-clear" id="clear-advanced-filters">Limpiar Filtros</button>
+                    <button class="btn-filter btn-apply" id="apply-advanced-filters">Aplicar Filtros</button>
                 </div>
             </div>
 
-            <!-- Loading Spinner -->
-            <div id="loading" class="loading">
+            <!-- Loading Indicator -->
+            <div id="loading-indicator" class="loading">
                 <div class="spinner"></div>
                 <p>Cargando y enriqueciendo noticias de 16 fuentes globales con metadata de seguridad...</p>
             </div>
@@ -203,6 +197,15 @@
 
             <!-- Sidebar -->
             <aside class="news-sidebar">
+                <!-- NUEVO: Widget de Clasificación por Fechas -->
+                <section class="sidebar-widget date-archive-widget">
+                    <h3>📅 Entradas Mensuales</h3>
+                    <div id="date-archive-container" class="archive-loading">
+                        <div class="spinner"></div>
+                        <p>Cargando clasificación...</p>
+                    </div>
+                </section>
+
                 <!-- Top Productos Afectados -->
                 <section class="sidebar-widget">
                     <h3>💻 Top Productos Afectados</h3>
@@ -316,6 +319,7 @@
     <script src="/assets/js/main.js" defer></script>
     <script src="/assets/js/news-advanced-filters.js"></script>
     <script src="/assets/js/news-integrated.js"></script>
+    <script src="/assets/js/news-date-widget.js"></script>
     
     <!-- Script para Toggle de Filtros Avanzados -->
     <script>

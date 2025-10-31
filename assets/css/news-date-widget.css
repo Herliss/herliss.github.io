@@ -1,0 +1,385 @@
+/* ============================================
+   Widget de Clasificación de Noticias por Fecha
+   VERSIÓN LISTA SIMPLE - Similar al ejemplo proporcionado
+   ============================================ */
+
+/* === Date Widget Container === */
+.date-archive-widget {
+    background: #d4e6f1;
+    padding: 0;
+    border-radius: 8px;
+    box-shadow: var(--shadow);
+    margin-bottom: 2rem;
+    overflow: hidden;
+}
+
+.date-archive-widget h3 {
+    font-size: 1rem;
+    margin: 0;
+    padding: 0.75rem 1rem;
+    color: white;
+    background: linear-gradient(135deg, #4a90a4 0%, #3a7d91 100%);
+    border: none;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 600;
+}
+
+/* === Archive List === */
+.archive-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+/* === Year Items === */
+.archive-year {
+    margin: 0;
+    border-bottom: 1px solid #b8d4e3;
+}
+
+.archive-year:last-child {
+    border-bottom: none;
+}
+
+.year-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.625rem 1rem;
+    background: #e8f4f8;
+    cursor: pointer;
+    transition: background 0.2s ease;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #2c5f6f;
+}
+
+.year-header:hover {
+    background: #d0e7f2;
+}
+
+.year-header.active {
+    background: #c0dff0;
+}
+
+.year-toggle {
+    font-size: 0.7rem;
+    width: 12px;
+    text-align: center;
+    transition: transform 0.3s ease;
+    color: #4a90a4;
+}
+
+.year-label {
+    flex: 1;
+    font-weight: 700;
+}
+
+.year-count {
+    font-size: 0.75rem;
+    color: #5a7d8a;
+    font-weight: 400;
+}
+
+/* === Month Container === */
+.month-container {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease-out;
+    background: white;
+}
+
+.month-container.active {
+    max-height: 5000px;
+    transition: max-height 0.5s ease-in;
+}
+
+.month-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+/* === Month Items === */
+.archive-month {
+    margin: 0;
+    border-top: 1px solid #e8f0f4;
+}
+
+.month-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem 0.5rem 2rem;
+    cursor: pointer;
+    transition: background 0.2s ease;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #34495e;
+    background: #f8fbfc;
+}
+
+.month-header:hover {
+    background: #e8f4f8;
+}
+
+.month-header.active {
+    background: #dceef6;
+}
+
+.month-toggle {
+    font-size: 0.65rem;
+    width: 10px;
+    text-align: center;
+    transition: transform 0.3s ease;
+    color: #4a90a4;
+}
+
+.month-label {
+    flex: 1;
+    font-weight: 600;
+}
+
+.month-count {
+    font-size: 0.7rem;
+    color: #7f8c8d;
+    font-weight: 400;
+}
+
+/* === Article List === */
+.article-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease-out;
+    background: white;
+}
+
+.month-header.active + .article-list {
+    max-height: 3000px;
+    transition: max-height 0.5s ease-in;
+}
+
+.article-item {
+    margin: 0;
+    padding: 0;
+}
+
+.article-item a {
+    display: block;
+    padding: 0.4rem 1rem 0.4rem 3rem;
+    color: #2980b9;
+    text-decoration: none;
+    font-size: 0.8rem;
+    line-height: 1.4;
+    transition: all 0.2s ease;
+    border-left: 2px solid transparent;
+}
+
+.article-item a:hover {
+    background: #e8f4f8;
+    color: #1a5f7a;
+    padding-left: 3.25rem;
+    border-left-color: #3498db;
+}
+
+.article-item a:visited {
+    color: #8e44ad;
+}
+
+/* === Total Stats === */
+.archive-stats {
+    margin: 0;
+    padding: 0.75rem 1rem;
+    border-top: 1px solid #b8d4e3;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.75rem;
+    color: #5a7d8a;
+    background: #e8f4f8;
+}
+
+.stat-total {
+    font-weight: 600;
+}
+
+.stat-number {
+    color: #2c5f6f;
+    font-weight: 700;
+}
+
+/* === Empty State === */
+.archive-empty {
+    text-align: center;
+    padding: 2rem 1rem;
+    color: #7f8c8d;
+    font-size: 0.875rem;
+    background: white;
+}
+
+.archive-empty .icon {
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+    opacity: 0.5;
+}
+
+/* === Loading State === */
+.archive-loading {
+    text-align: center;
+    padding: 2rem 1rem;
+    color: #7f8c8d;
+    background: white;
+}
+
+.archive-loading .spinner {
+    width: 30px;
+    height: 30px;
+    border: 3px solid #e8f4f8;
+    border-top: 3px solid #4a90a4;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 1rem;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* === Responsive === */
+@media (max-width: 768px) {
+    .date-archive-widget h3 {
+        font-size: 0.9rem;
+        padding: 0.625rem 0.75rem;
+    }
+    
+    .year-header {
+        padding: 0.5rem 0.75rem;
+        font-size: 0.85rem;
+    }
+    
+    .month-header {
+        padding: 0.4rem 0.75rem 0.4rem 1.5rem;
+        font-size: 0.8rem;
+    }
+    
+    .article-item a {
+        padding: 0.35rem 0.75rem 0.35rem 2.5rem;
+        font-size: 0.75rem;
+    }
+    
+    .article-item a:hover {
+        padding-left: 2.75rem;
+    }
+}
+
+/* === Dark Mode === */
+@media (prefers-color-scheme: dark) {
+    .date-archive-widget {
+        background: #2c3e50;
+    }
+    
+    .date-archive-widget h3 {
+        background: linear-gradient(135deg, #34495e 0%, #2c3e50 100%);
+    }
+    
+    .year-header {
+        background: #34495e;
+        color: #ecf0f1;
+    }
+    
+    .year-header:hover,
+    .year-header.active {
+        background: #3a5169;
+    }
+    
+    .month-container {
+        background: #2c3e50;
+    }
+    
+    .month-header {
+        background: #2c3e50;
+        color: #ecf0f1;
+        border-top-color: #34495e;
+    }
+    
+    .month-header:hover,
+    .month-header.active {
+        background: #34495e;
+    }
+    
+    .article-list {
+        background: #2c3e50;
+    }
+    
+    .article-item a {
+        color: #5dade2;
+    }
+    
+    .article-item a:hover {
+        background: #34495e;
+        color: #85c1e9;
+    }
+    
+    .article-item a:visited {
+        color: #bb8fce;
+    }
+    
+    .archive-stats {
+        background: #34495e;
+        border-top-color: #2c3e50;
+        color: #bdc3c7;
+    }
+    
+    .stat-number {
+        color: #ecf0f1;
+    }
+    
+    .archive-empty,
+    .archive-loading {
+        background: #2c3e50;
+        color: #bdc3c7;
+    }
+}
+
+/* === Smooth Transitions === */
+.year-header,
+.month-header,
+.article-item a {
+    transition: all 0.2s ease;
+}
+
+/* === Accessibility === */
+.year-header:focus,
+.month-header:focus,
+.article-item a:focus {
+    outline: 2px solid #3498db;
+    outline-offset: -2px;
+}
+
+/* === Print Styles === */
+@media print {
+    .date-archive-widget {
+        box-shadow: none;
+    }
+    
+    .year-header,
+    .month-header {
+        cursor: default;
+    }
+    
+    .month-container,
+    .article-list {
+        max-height: none !important;
+    }
+    
+    .year-header.active,
+    .month-header.active {
+        background: transparent;
+    }
+}
