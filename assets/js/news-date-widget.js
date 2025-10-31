@@ -1,7 +1,9 @@
 /**
- * Date Archive Widget - Lista Simple de Títulos (VERSIÓN CORRECTA)
- * Muestra árbol jerárquico: Año > Mes > Lista de títulos
- * NO muestra tarjetas completas, solo enlaces a noticias
+ * Date Archive Widget - VERSIÓN CORREGIDA
+ * Correcciones:
+ * 1. Traducción automática al español funcional
+ * 2. Mostrar contenido completo de la noticia con imagen
+ * 3. Orden correcto: Título → Imagen → Noticia → Tags/Botones
  * 
  * Autor: Herliss Briceño
  * Fecha: Octubre 2025
@@ -135,8 +137,8 @@ function renderDateArchiveWidget(articles) {
                 html += `
                     <li class="article-item">
                         <a href="${sanitizeHTML(article.link)}" 
-                           target="_blank" 
-                           rel="noopener noreferrer"
+                           data-article-url="${sanitizeHTML(article.link)}"
+                           class="article-link-sidebar"
                            title="${sanitizeHTML(article.title)}">
                             ◊ ${sanitizeHTML(truncatedTitle)}
                         </a>
@@ -171,6 +173,7 @@ function renderDateArchiveWidget(articles) {
 // FUNCIÓN AUXILIAR: SANITIZAR HTML
 // ============================================
 function sanitizeHTML(str) {
+    if (!str) return '';
     const temp = document.createElement('div');
     temp.textContent = str;
     return temp.innerHTML;
@@ -199,11 +202,11 @@ function initArchiveEvents() {
     });
     
     // Event listeners para clics en artículos (mostrar resumen)
-    const articleLinks = document.querySelectorAll('.article-item a');
+    const articleLinks = document.querySelectorAll('.article-link-sidebar');
     articleLinks.forEach(link => {
         link.addEventListener('click', function(e) {
             e.preventDefault();
-            const articleUrl = this.getAttribute('href');
+            const articleUrl = this.getAttribute('data-article-url');
             const articleTitle = this.getAttribute('title');
             showArticleSummary(articleUrl, articleTitle);
         });
@@ -233,161 +236,163 @@ function toggleYear(header) {
 // TOGGLE DE MES (ACORDEÓN)
 // ============================================
 function toggleMonth(header) {
-    const articleList = header.nextElementSibling;
+    const list = header.nextElementSibling;
     const toggle = header.querySelector('.month-toggle');
     const isActive = header.classList.contains('active');
     
-    // Cerrar todos los otros meses del mismo año
-    const parentYear = header.closest('.archive-year');
-    const allMonthHeaders = parentYear.querySelectorAll('.month-header');
-    
-    allMonthHeaders.forEach(otherHeader => {
-        if (otherHeader !== header && otherHeader.classList.contains('active')) {
-            const otherList = otherHeader.nextElementSibling;
-            const otherToggle = otherHeader.querySelector('.month-toggle');
-            otherHeader.classList.remove('active');
-            otherList.classList.remove('active');
-            otherToggle.textContent = '▶';
-        }
-    });
-    
-    // Toggle del mes actual
     if (isActive) {
         header.classList.remove('active');
-        articleList.classList.remove('active');
+        list.style.display = 'none';
         toggle.textContent = '▶';
     } else {
         header.classList.add('active');
-        articleList.classList.add('active');
+        list.style.display = 'block';
         toggle.textContent = '▼';
     }
 }
 
 // ============================================
-// ACTUALIZAR WIDGET CUANDO CAMBIAN LAS NOTICIAS
+// TRADUCCIÓN AUTOMÁTICA AL ESPAÑOL
 // ============================================
-function updateDateArchiveWidget() {
-    const sourceData = window.unfilteredNewsData || window.newsData;
-    if (sourceData) {
-        renderDateArchiveWidget(sourceData);
+async function translateToSpanish(text) {
+    // Si el texto ya está en español o es muy corto, no traducir
+    if (!text || text.length < 20) {
+        return { text: text, translated: false };
+    }
+    
+    // Detectar si el texto probablemente está en español
+    const spanishWords = ['el', 'la', 'los', 'las', 'de', 'del', 'que', 'para', 'con', 'una', 'un', 'por'];
+    const lowerText = text.toLowerCase();
+    let spanishWordCount = 0;
+    spanishWords.forEach(word => {
+        if (lowerText.includes(' ' + word + ' ')) spanishWordCount++;
+    });
+    
+    // Si hay muchas palabras en español, probablemente ya está traducido
+    if (spanishWordCount >= 3) {
+        return { text: text, translated: false };
+    }
+    
+    try {
+        // Usar API de traducción gratuita de LibreTranslate (vía allorigins para CORS)
+        const apiUrl = 'https://libretranslate.de/translate';
+        
+        console.log('🌐 Traduciendo texto al español...');
+        
+        const response = await fetch(apiUrl, {
+            method: 'POST',
+            body: JSON.stringify({
+                q: text,
+                source: 'en',
+                target: 'es',
+                format: 'text'
+            }),
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        if (!response.ok) {
+            console.warn('⚠️ Error en traducción, usando texto original');
+            return { text: text, translated: false };
+        }
+        
+        const data = await response.json();
+        const translatedText = data.translatedText || text;
+        
+        console.log('✅ Texto traducido exitosamente');
+        return { text: translatedText, translated: true };
+        
+    } catch (error) {
+        console.error('❌ Error al traducir:', error);
+        return { text: text, translated: false };
     }
 }
 
 // ============================================
-// INTEGRACIÓN CON EL SISTEMA DE NOTICIAS
+// EXTRAER IMAGEN DE LA NOTICIA
 // ============================================
-// Escuchar el evento de carga de noticias
-document.addEventListener('newsLoaded', function(e) {
-    console.log('📰 Evento newsLoaded recibido, actualizando widget de archivo');
-    updateDateArchiveWidget();
-});
-
-// Inicializar cuando el DOM esté listo
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('✅ Date Archive Widget (Lista Simple) inicializado');
-    
-    // Si las noticias ya están cargadas, renderizar inmediatamente
-    if (window.unfilteredNewsData || window.newsData) {
-        setTimeout(updateDateArchiveWidget, 500);
+function extractImageFromArticle(article) {
+    // Intentar obtener imagen del enclosure
+    if (article.enclosure && article.enclosure.url) {
+        return article.enclosure.url;
     }
-});
-
-// ============================================
-// EXPORT PARA USO GLOBAL
-// ============================================
-window.DateArchiveWidget = {
-    render: renderDateArchiveWidget,
-    update: updateDateArchiveWidget
-};
-
-// ============================================
-// DETECTAR IDIOMA Y TRADUCIR SI ES NECESARIO
-// ============================================
-async function translateToSpanish(text) {
-    // Detectar si el texto está en inglés (simple detección)
-    const englishWords = ['the', 'and', 'or', 'is', 'are', 'was', 'were', 'have', 'has', 'had', 'been', 'being', 'this', 'that'];
-    const spanishWords = ['el', 'la', 'los', 'las', 'un', 'una', 'de', 'del', 'en', 'es', 'son', 'que'];
     
-    const lowerText = text.toLowerCase();
-    let englishCount = 0;
-    let spanishCount = 0;
-    
-    englishWords.forEach(word => {
-        if (lowerText.includes(' ' + word + ' ')) englishCount++;
-    });
-    
-    spanishWords.forEach(word => {
-        if (lowerText.includes(' ' + word + ' ')) spanishCount++;
-    });
-    
-    // Si parece estar en inglés, intentar traducir
-    if (englishCount > spanishCount) {
-        try {
-            // Usar API de traducción gratuita (MyMemory)
-            const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=en|es`;
-            const response = await fetch(url);
-            const data = await response.json();
-            
-            if (data.responseStatus === 200 && data.responseData.translatedText) {
-                return {
-                    translated: true,
-                    text: data.responseData.translatedText
-                };
-            }
-        } catch (error) {
-            console.warn('Error en traducción, usando texto original:', error);
+    // Intentar obtener imagen del contenido HTML
+    if (article.description || article.content) {
+        const content = article.description || article.content;
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = content;
+        
+        const img = tempDiv.querySelector('img');
+        if (img && img.src) {
+            return img.src;
         }
     }
     
-    return {
-        translated: false,
-        text: text
-    };
+    // Intentar obtener del campo media:thumbnail o media:content
+    if (article['media:thumbnail'] && article['media:thumbnail'].url) {
+        return article['media:thumbnail'].url;
+    }
+    
+    if (article['media:content'] && article['media:content'].url) {
+        return article['media:content'].url;
+    }
+    
+    return null;
 }
 
 // ============================================
-// DETERMINAR CATEGORÍA DE FUENTE
+// OBTENER CATEGORÍA DE FUENTE
 // ============================================
 function getSourceCategory(sourceName) {
     const generalSources = ['The Hacker News', 'BleepingComputer', 'SecurityWeek', 'Dark Reading', 'Krebs on Security', 'SC Magazine', 'Cybernews'];
-    const intelligenceSources = ['US-CERT', 'CISA', 'Talos Intelligence', 'VirusTotal'];
-    const corporateSources = ['Google Cloud Security', 'Microsoft Security', 'Cisco Security', 'Palo Alto', 'Unit42', 'CrowdStrike', 'Mandiant'];
+    const intelligenceSources = ['CISA', 'US-CERT', 'Talos', 'VirusTotal'];
+    const corporateSources = ['Google', 'Microsoft', 'Cisco', 'Palo Alto', 'CrowdStrike', 'Mandiant'];
     
-    if (generalSources.some(s => sourceName.includes(s))) return 'Noticias Generales';
-    if (intelligenceSources.some(s => sourceName.includes(s))) return 'Inteligencia';
-    if (corporateSources.some(s => sourceName.includes(s))) return 'Corporativas';
+    const lowerSource = sourceName.toLowerCase();
     
-    return 'General';
+    if (generalSources.some(s => lowerSource.includes(s.toLowerCase()))) {
+        return '📰 Noticias Generales';
+    }
+    if (intelligenceSources.some(s => lowerSource.includes(s.toLowerCase()))) {
+        return '🛡️ Inteligencia de Amenazas';
+    }
+    if (corporateSources.some(s => lowerSource.includes(s.toLowerCase()))) {
+        return '🏢 Blogs Corporativos';
+    }
+    
+    return '📄 General';
 }
 
 // ============================================
-// ANALIZAR IMPACTO EN CIA (Confidencialidad, Integridad, Disponibilidad)
+// ANALIZAR IMPACTO DE SEGURIDAD
 // ============================================
 function analyzeSecurityImpact(title, description) {
     const impacts = [];
     const text = (title + ' ' + description).toLowerCase();
     
-    // Confidencialidad
-    if (text.match(/breach|leak|exposure|credential|password|data theft|exfiltration|confidential|privacy|steal/i)) {
-        impacts.push({ type: 'Confidencialidad', icon: '🔒', color: '#e74c3c' });
+    // Confidencialidad (C)
+    if (text.match(/leak|breach|exposed|stolen|unauthorized access|data theft|credential|password/i)) {
+        impacts.push({ type: 'Confidencialidad', icon: '🔴', color: '#e74c3c' });
     }
     
-    // Integridad
-    if (text.match(/tamper|modify|alter|manipulate|inject|corruption|integrity|falsif|forge/i)) {
-        impacts.push({ type: 'Integridad', icon: '✓', color: '#f39c12' });
+    // Integridad (I)
+    if (text.match(/tamper|modify|corrupt|inject|manipulat|backdoor|trojan/i)) {
+        impacts.push({ type: 'Integridad', icon: '🔵', color: '#3498db' });
     }
     
-    // Disponibilidad
-    if (text.match(/ddos|denial|outage|ransomware|unavailable|downtime|availability|crash|disruption/i)) {
-        impacts.push({ type: 'Disponibilidad', icon: '⚡', color: '#9b59b6' });
+    // Disponibilidad (A)
+    if (text.match(/ddos|dos|denial of service|ransomware|outage|downtime|crash/i)) {
+        impacts.push({ type: 'Disponibilidad', icon: '🟡', color: '#f39c12' });
     }
     
-    // No Repudio
-    if (text.match(/audit|log|trace|accountability|non-repudiation|forensic|evidence/i)) {
-        impacts.push({ type: 'No Repudio', icon: '📝', color: '#3498db' });
+    // No repudio (NR)
+    if (text.match(/audit|log|forensic|evidence|tracking|monitoring/i)) {
+        impacts.push({ type: 'No Repudio', icon: '🟣', color: '#9b59b6' });
     }
     
-    // Si no se detecta ninguno, agregar "General"
+    // Si no hay impactos específicos, agregar general
     if (impacts.length === 0) {
         impacts.push({ type: 'Seguridad General', icon: '🛡️', color: '#95a5a6' });
     }
@@ -428,13 +433,17 @@ function detectPopularCategories(title, description) {
 
 // ============================================
 // MOSTRAR RESUMEN DE ARTÍCULO EN ÁREA PRINCIPAL
+// CORRECCIÓN: Traducir título y contenido, mostrar imagen
 // ============================================
 async function showArticleSummary(articleUrl, articleTitle) {
+    console.log('🔍 Mostrando artículo:', articleUrl);
+    
     // Buscar el artículo en los datos cargados
     const sourceData = window.unfilteredNewsData || window.newsData;
     
     if (!sourceData) {
-        console.warn('No hay datos de noticias disponibles');
+        console.warn('⚠️ No hay datos de noticias disponibles');
+        alert('No se encontraron datos de noticias. Por favor, espera a que se carguen las noticias.');
         return;
     }
     
@@ -442,7 +451,8 @@ async function showArticleSummary(articleUrl, articleTitle) {
     const article = sourceData.find(item => item.link === articleUrl);
     
     if (!article) {
-        console.warn('Artículo no encontrado');
+        console.warn('⚠️ Artículo no encontrado en datos');
+        alert('Artículo no encontrado. Por favor, intenta de nuevo.');
         return;
     }
     
@@ -450,7 +460,7 @@ async function showArticleSummary(articleUrl, articleTitle) {
     const newsContainer = document.getElementById('news-container');
     
     if (!newsContainer) {
-        console.warn('Contenedor de noticias no encontrado');
+        console.warn('⚠️ Contenedor de noticias no encontrado');
         return;
     }
     
@@ -459,11 +469,6 @@ async function showArticleSummary(articleUrl, articleTitle) {
     if (existingSummary) {
         existingSummary.remove();
     }
-    
-    // Extraer descripción completa (limpiar HTML pero mantener todo el texto)
-    const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = article.description || article.contentSnippet || article.content || '';
-    let description = tempDiv.textContent || tempDiv.innerText || '';
     
     // Mostrar indicador de carga
     const loadingCard = document.createElement('div');
@@ -479,16 +484,36 @@ async function showArticleSummary(articleUrl, articleTitle) {
         <div class="featured-content">
             <div class="loading-content">
                 <div class="spinner-large"></div>
-                <p>Procesando y traduciendo contenido...</p>
+                <p>Procesando y traduciendo contenido al español...</p>
             </div>
         </div>
     `;
     newsContainer.insertBefore(loadingCard, newsContainer.firstChild);
     loadingCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
     
-    // Traducir si es necesario
-    const translationResult = await translateToSpanish(description);
-    const finalDescription = translationResult.text;
+    // Extraer descripción completa (limpiar HTML pero mantener todo el texto)
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = article.description || article.contentSnippet || article.content || '';
+    let description = tempDiv.textContent || tempDiv.innerText || '';
+    
+    // Si la descripción está vacía, intentar obtener del summary
+    if (!description && article.summary) {
+        description = article.summary;
+    }
+    
+    // CORRECCIÓN 1: Traducir TANTO el título como el contenido
+    console.log('🌐 Iniciando traducción...');
+    const titleTranslation = await translateToSpanish(article.title);
+    const descriptionTranslation = await translateToSpanish(description);
+    
+    const translatedTitle = titleTranslation.text;
+    const translatedDescription = descriptionTranslation.text;
+    const wasTranslated = titleTranslation.translated || descriptionTranslation.translated;
+    
+    console.log('✅ Traducción completada');
+    
+    // CORRECCIÓN 2: Extraer imagen de la noticia
+    const articleImage = extractImageFromArticle(article);
     
     // Formatear fecha
     const date = new Date(article.pubDate);
@@ -501,7 +526,7 @@ async function showArticleSummary(articleUrl, articleTitle) {
     });
     
     // Obtener nombre de la fuente
-    const sourceName = article.source || 'Fuente desconocida';
+    const sourceName = article.source || article.creator || 'Fuente desconocida';
     
     // Analizar impactos de seguridad
     const securityImpacts = analyzeSecurityImpact(article.title, description);
@@ -524,7 +549,7 @@ async function showArticleSummary(articleUrl, articleTitle) {
         `<span class="category-tag">${cat}</span>`
     ).join('');
     
-    // Reemplazar con contenido completo
+    // CORRECCIÓN 3: Orden correcto - Título → Imagen → Contenido → Tags/Botones
     loadingCard.innerHTML = `
         <div class="featured-header">
             <div class="featured-title-section">
@@ -536,25 +561,33 @@ async function showArticleSummary(articleUrl, articleTitle) {
             </button>
         </div>
         <div class="featured-content">
+            <!-- TÍTULO PRINCIPAL -->
             <div class="featured-main-title">
-                ${sanitizeHTML(article.title)}
+                ${sanitizeHTML(translatedTitle)}
             </div>
             
-            ${translationResult.translated ? '<div class="translation-badge">🌐 Traducido automáticamente del inglés</div>' : ''}
+            <!-- BADGE DE TRADUCCIÓN -->
+            ${wasTranslated ? '<div class="translation-badge">🌐 Traducido automáticamente del inglés al español</div>' : ''}
             
-            <div class="featured-meta-grid">
-                <div class="meta-box">
-                    <span class="meta-icon">🔗</span>
-                    <div class="meta-info">
-                        <span class="meta-label">Fuente:</span>
-                        <a href="${sanitizeHTML(articleUrl)}" 
-                           target="_blank" 
-                           rel="noopener noreferrer"
-                           class="meta-value meta-link">
-                            ${sanitizeHTML(sourceName)}
-                        </a>
-                    </div>
+            <!-- IMAGEN DE LA NOTICIA (SI EXISTE) -->
+            ${articleImage ? `
+            <div class="featured-image">
+                <img src="${sanitizeHTML(articleImage)}" 
+                     alt="${sanitizeHTML(translatedTitle)}"
+                     onerror="this.parentElement.style.display='none'">
+            </div>
+            ` : ''}
+            
+            <!-- CONTENIDO COMPLETO DE LA NOTICIA -->
+            <div class="featured-description-full">
+                <h4>📄 Contenido de la Noticia:</h4>
+                <div class="description-text">
+                    ${sanitizeHTML(translatedDescription)}
                 </div>
+            </div>
+            
+            <!-- METADATOS -->
+            <div class="featured-meta-grid">
                 <div class="meta-box">
                     <span class="meta-icon">📅</span>
                     <div class="meta-info">
@@ -562,9 +595,24 @@ async function showArticleSummary(articleUrl, articleTitle) {
                         <span class="meta-value">${formattedDate}</span>
                     </div>
                 </div>
+                <div class="meta-box">
+                    <span class="meta-icon">🔗</span>
+                    <div class="meta-info">
+                        <span class="meta-label">Fuente:</span>
+                        <span class="meta-value">${sanitizeHTML(sourceName)}</span>
+                    </div>
+                </div>
             </div>
             
+            <!-- TAGS Y CATEGORÍAS -->
             <div class="tags-section">
+                <div class="tag-group">
+                    <h4>🏷️ Tipo de Fuente:</h4>
+                    <div class="tags-container">
+                        <span class="source-type-tag">${sourceCategory}</span>
+                    </div>
+                </div>
+                
                 <div class="tag-group">
                     <h4>🎯 Impacto en Seguridad:</h4>
                     <div class="tags-container">
@@ -578,22 +626,9 @@ async function showArticleSummary(articleUrl, articleTitle) {
                         ${categoriesHTML}
                     </div>
                 </div>
-                
-                <div class="tag-group">
-                    <h4>🏷️ Tipo de Fuente:</h4>
-                    <div class="tags-container">
-                        <span class="source-type-tag">${sourceCategory}</span>
-                    </div>
-                </div>
             </div>
             
-            <div class="featured-description-full">
-                <h4>📄 Contenido Completo:</h4>
-                <div class="description-text">
-                    ${sanitizeHTML(finalDescription)}
-                </div>
-            </div>
-            
+            <!-- BOTÓN PARA LEER ORIGINAL -->
             <div class="featured-actions">
                 <a href="${sanitizeHTML(articleUrl)}" 
                    target="_blank" 
@@ -605,7 +640,7 @@ async function showArticleSummary(articleUrl, articleTitle) {
         </div>
     `;
     
-    console.log('✅ Artículo completo mostrado en área principal:', article.title);
+    console.log('✅ Artículo completo mostrado:', translatedTitle);
 }
 
 // ============================================
@@ -623,3 +658,81 @@ function closeFeaturedArticle() {
 
 // Exportar función global para el botón de cierre
 window.closeFeaturedArticle = closeFeaturedArticle;
+
+// ============================================
+// AUTO-INICIALIZACIÓN DEL WIDGET
+// ============================================
+
+// Función para intentar inicializar el widget
+function tryInitializeDateWidget() {
+    const container = document.getElementById('date-archive-container');
+    
+    if (!container) {
+        console.warn('⚠️ Contenedor date-archive-container no encontrado');
+        return;
+    }
+    
+    // Verificar si hay datos disponibles
+    const newsData = window.unfilteredNewsData || window.newsData;
+    
+    if (newsData && newsData.length > 0) {
+        console.log('✅ Datos disponibles, inicializando widget de fechas...');
+        renderDateArchiveWidget(newsData);
+    } else {
+        console.log('⏳ Esperando datos de noticias...');
+    }
+}
+
+// Intentar inicializar cuando el DOM esté listo
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function() {
+        // Esperar un poco para que se carguen los datos
+        setTimeout(tryInitializeDateWidget, 1000);
+    });
+} else {
+    // DOM ya está listo
+    setTimeout(tryInitializeDateWidget, 1000);
+}
+
+// Escuchar evento personalizado de datos cargados (si existe)
+window.addEventListener('newsDataLoaded', function(e) {
+    console.log('📰 Evento newsDataLoaded recibido');
+    if (e.detail && e.detail.articles) {
+        renderDateArchiveWidget(e.detail.articles);
+    }
+});
+
+// Polling para detectar cuando los datos estén disponibles (fallback)
+let pollAttempts = 0;
+const maxPollAttempts = 30; // 30 segundos máximo
+const pollInterval = setInterval(function() {
+    pollAttempts++;
+    
+    const newsData = window.unfilteredNewsData || window.newsData;
+    
+    if (newsData && newsData.length > 0) {
+        console.log('✅ Datos detectados, inicializando widget de fechas...');
+        clearInterval(pollInterval);
+        renderDateArchiveWidget(newsData);
+    } else if (pollAttempts >= maxPollAttempts) {
+        console.error('❌ Timeout: No se pudieron cargar los datos después de 30 segundos');
+        clearInterval(pollInterval);
+        
+        // Mostrar mensaje de error
+        const container = document.getElementById('date-archive-container');
+        if (container) {
+            container.innerHTML = `
+                <div class="archive-empty">
+                    <div class="icon">⚠️</div>
+                    <p>No se pudieron cargar las noticias</p>
+                    <button onclick="location.reload()" style="margin-top: 1rem; padding: 0.5rem 1rem; background: #3498db; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                        🔄 Recargar página
+                    </button>
+                </div>
+            `;
+        }
+    }
+}, 1000);
+
+// Exportar función para uso manual si es necesario
+window.renderDateArchiveWidget = renderDateArchiveWidget;

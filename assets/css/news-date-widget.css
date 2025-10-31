@@ -160,15 +160,12 @@
     list-style: none;
     margin: 0;
     padding: 0;
-    max-height: 0;
-    overflow: hidden;
-    transition: max-height 0.3s ease-out;
+    display: none; /* Oculto por defecto */
     background: white;
 }
 
 .month-header.active + .article-list {
-    max-height: 3000px;
-    transition: max-height 0.5s ease-in;
+    display: block; /* Mostrar cuando el mes está activo */
 }
 
 .article-item {
@@ -510,6 +507,28 @@
     font-size: 0.85rem;
     font-weight: 600;
     margin-bottom: 1.5rem;
+}
+
+/* Imagen de la Noticia */
+.featured-image {
+    margin: 1.5rem 0;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+    background: #f8f9fa;
+}
+
+.featured-image img {
+    width: 100%;
+    height: auto;
+    max-height: 500px;
+    object-fit: cover;
+    display: block;
+    transition: transform 0.3s ease;
+}
+
+.featured-image img:hover {
+    transform: scale(1.02);
 }
 
 /* Meta Grid */
