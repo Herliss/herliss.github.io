@@ -159,21 +159,12 @@ function renderDateArchiveWidget(articles) {
     
     html += '</ul>';
     
-    // Agregar estadísticas totales
-    const totalArticles = articles.length;
-    html += `
-        <div class="archive-stats">
-            <span class="stat-total">Total:</span>
-            <span class="stat-number">${totalArticles} noticias</span>
-        </div>
-    `;
-    
     container.innerHTML = html;
     
     // Inicializar eventos
     initArchiveEvents();
     
-    console.log(`✅ Widget de archivo generado: ${years.length} años, ${totalArticles} noticias`);
+    console.log(`✅ Widget de archivo generado: ${years.length} años, ${articles.length} noticias`);
 }
 
 // ============================================
@@ -235,6 +226,21 @@ function toggleMonth(header) {
     const toggle = header.querySelector('.month-toggle');
     const isActive = header.classList.contains('active');
     
+    // Cerrar todos los otros meses del mismo año
+    const parentYear = header.closest('.archive-year');
+    const allMonthHeaders = parentYear.querySelectorAll('.month-header');
+    
+    allMonthHeaders.forEach(otherHeader => {
+        if (otherHeader !== header && otherHeader.classList.contains('active')) {
+            const otherList = otherHeader.nextElementSibling;
+            const otherToggle = otherHeader.querySelector('.month-toggle');
+            otherHeader.classList.remove('active');
+            otherList.classList.remove('active');
+            otherToggle.textContent = '▶';
+        }
+    });
+    
+    // Toggle del mes actual
     if (isActive) {
         header.classList.remove('active');
         articleList.classList.remove('active');

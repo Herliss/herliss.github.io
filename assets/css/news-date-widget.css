@@ -24,6 +24,7 @@
     align-items: center;
     gap: 0.5rem;
     font-weight: 600;
+    text-align: left;
 }
 
 /* === Archive List === */
@@ -54,6 +55,7 @@
     font-size: 0.9rem;
     font-weight: 600;
     color: #2c5f6f;
+    text-align: left;
 }
 
 .year-header:hover {
@@ -67,7 +69,7 @@
 .year-toggle {
     font-size: 0.7rem;
     width: 12px;
-    text-align: center;
+    text-align: left;
     transition: transform 0.3s ease;
     color: #4a90a4;
 }
@@ -75,12 +77,14 @@
 .year-label {
     flex: 1;
     font-weight: 700;
+    text-align: left;
 }
 
 .year-count {
     font-size: 0.75rem;
     color: #5a7d8a;
     font-weight: 400;
+    text-align: left;
 }
 
 /* === Month Container === */
@@ -119,6 +123,7 @@
     font-weight: 600;
     color: #34495e;
     background: #f8fbfc;
+    text-align: left;
 }
 
 .month-header:hover {
@@ -132,7 +137,7 @@
 .month-toggle {
     font-size: 0.65rem;
     width: 10px;
-    text-align: center;
+    text-align: left;
     transition: transform 0.3s ease;
     color: #4a90a4;
 }
@@ -140,12 +145,14 @@
 .month-label {
     flex: 1;
     font-weight: 600;
+    text-align: left;
 }
 
 .month-count {
     font-size: 0.7rem;
     color: #7f8c8d;
     font-weight: 400;
+    text-align: left;
 }
 
 /* === Article List === */
@@ -178,6 +185,7 @@
     line-height: 1.4;
     transition: all 0.2s ease;
     border-left: 2px solid transparent;
+    text-align: left;
 }
 
 .article-item a:hover {
@@ -202,6 +210,7 @@
     font-size: 0.75rem;
     color: #5a7d8a;
     background: #e8f4f8;
+    text-align: left;
 }
 
 .stat-total {
@@ -215,7 +224,7 @@
 
 /* === Empty State === */
 .archive-empty {
-    text-align: center;
+    text-align: left;
     padding: 2rem 1rem;
     color: #7f8c8d;
     font-size: 0.875rem;
@@ -230,7 +239,7 @@
 
 /* === Loading State === */
 .archive-loading {
-    text-align: center;
+    text-align: left;
     padding: 2rem 1rem;
     color: #7f8c8d;
     background: white;
@@ -243,7 +252,7 @@
     border-top: 3px solid #4a90a4;
     border-radius: 50%;
     animation: spin 1s linear infinite;
-    margin: 0 auto 1rem;
+    margin: 0 0 1rem 0;
 }
 
 @keyframes spin {
