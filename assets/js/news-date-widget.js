@@ -233,7 +233,7 @@ function toggleYear(header) {
 }
 
 // ============================================
-// TOGGLE DE MES (ACORDEÓN)
+// TOGGLE DE MES (ACORDEÓN REAL)
 // ============================================
 function toggleMonth(header) {
     const list = header.nextElementSibling;
@@ -241,10 +241,28 @@ function toggleMonth(header) {
     const isActive = header.classList.contains('active');
     
     if (isActive) {
+        // Cerrar este mes
         header.classList.remove('active');
         list.style.display = 'none';
         toggle.textContent = '▶';
     } else {
+        // CERRAR TODOS LOS DEMÁS MESES (ACORDEÓN REAL)
+        const allMonthHeaders = document.querySelectorAll('.month-header');
+        allMonthHeaders.forEach(otherHeader => {
+            if (otherHeader !== header) {
+                otherHeader.classList.remove('active');
+                const otherList = otherHeader.nextElementSibling;
+                if (otherList) {
+                    otherList.style.display = 'none';
+                }
+                const otherToggle = otherHeader.querySelector('.month-toggle');
+                if (otherToggle) {
+                    otherToggle.textContent = '▶';
+                }
+            }
+        });
+        
+        // Abrir este mes
         header.classList.add('active');
         list.style.display = 'block';
         toggle.textContent = '▼';
