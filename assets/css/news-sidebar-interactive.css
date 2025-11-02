@@ -1,0 +1,171 @@
+/* ============================================
+   Estilos para Filtrado Interactivo de Productos
+   Versión 2.0 - Top Productos Afectados Clickeables
+   ============================================ */
+
+/* === Producto Item Base === */
+.product-filter-item {
+    cursor: pointer !important;
+    transition: all 0.3s ease !important;
+    padding: 0.75rem 0.5rem !important;
+    border-radius: 6px !important;
+    margin-bottom: 0.5rem !important;
+    border-left: 4px solid transparent !important;
+    position: relative !important;
+}
+
+/* === Hover Effect === */
+.product-filter-item:hover {
+    background: #f8f9fa !important;
+    padding-left: 1rem !important;
+    transform: translateX(3px) !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05) !important;
+}
+
+/* === Active/Selected State === */
+.product-filter-active {
+    background: linear-gradient(135deg, rgba(52, 152, 219, 0.1) 0%, rgba(41, 128, 185, 0.15) 100%) !important;
+    border-left-color: #3498db !important;
+    padding-left: 1rem !important;
+    font-weight: bold !important;
+    box-shadow: 0 2px 8px rgba(52, 152, 219, 0.2) !important;
+}
+
+.product-filter-active:hover {
+    background: linear-gradient(135deg, rgba(52, 152, 219, 0.15) 0%, rgba(41, 128, 185, 0.2) 100%) !important;
+    transform: translateX(0) !important;
+}
+
+/* === Badge de Contador === */
+.product-filter-item span {
+    transition: all 0.3s ease !important;
+}
+
+.product-filter-active span {
+    font-weight: 700 !important;
+}
+
+/* === Indicador de Filtro Activo === */
+#product-filter-indicator {
+    animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes slideOut {
+    from {
+        opacity: 1;
+        transform: translateY(0);
+    }
+    to {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+}
+
+/* === Botón Limpiar Filtro === */
+#clear-product-filter {
+    transition: all 0.3s ease;
+}
+
+#clear-product-filter:hover {
+    background: #f8f9fa !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15) !important;
+}
+
+#clear-product-filter:active {
+    transform: translateY(0) !important;
+}
+
+/* === Tooltip (opcional) === */
+.product-filter-item::before {
+    content: '🔍 Clic para filtrar';
+    position: absolute;
+    top: 50%;
+    right: -140px;
+    transform: translateY(-50%);
+    background: #2c3e50;
+    color: white;
+    padding: 0.375rem 0.75rem;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+    z-index: 1000;
+}
+
+.product-filter-item:hover::before {
+    opacity: 0.9;
+}
+
+.product-filter-active::before {
+    content: '✅ Filtro activo - Clic para limpiar';
+    right: -180px;
+}
+
+/* === Responsive === */
+@media (max-width: 1200px) {
+    /* Ocultar tooltips en pantallas pequeñas */
+    .product-filter-item::before {
+        display: none;
+    }
+}
+
+@media (max-width: 768px) {
+    #product-filter-indicator {
+        flex-direction: column;
+        gap: 1rem;
+        text-align: center;
+    }
+    
+    #clear-product-filter {
+        width: 100%;
+    }
+}
+
+/* === Dark Mode === */
+@media (prefers-color-scheme: dark) {
+    .product-filter-item:hover {
+        background: #2a2a2a !important;
+    }
+    
+    .product-filter-active {
+        background: linear-gradient(135deg, rgba(52, 152, 219, 0.2) 0%, rgba(41, 128, 185, 0.25) 100%) !important;
+    }
+    
+    #product-filter-indicator {
+        box-shadow: 0 2px 10px rgba(52, 152, 219, 0.5);
+    }
+}
+
+/* === Accesibilidad === */
+.product-filter-item:focus {
+    outline: 2px solid #3498db;
+    outline-offset: 2px;
+}
+
+/* === Animación de Loading (opcional) === */
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.5;
+    }
+}
+
+.product-filter-loading {
+    animation: pulse 1.5s ease-in-out infinite;
+}

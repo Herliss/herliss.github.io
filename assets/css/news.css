@@ -132,6 +132,9 @@
 
 /* === News Grid === */
 .news-grid {
+    /* CRÍTICO: Especificar que debe estar en la PRIMERA columna del grid */
+    grid-column: 1;
+    
     display: grid;
     grid-template-columns: 1fr;
     gap: 2rem;
@@ -329,6 +332,9 @@
 
 /* === News Sidebar === */
 .news-sidebar {
+    /* CRÍTICO: Especificar que debe estar en la SEGUNDA columna del grid */
+    grid-column: 2;
+    
     display: flex;
     flex-direction: column;
     gap: 2rem;
@@ -489,7 +495,13 @@
         grid-template-columns: 1fr;
     }
     
+    /* En móvil, ambos elementos ocupan toda la columna */
+    .news-grid {
+        grid-column: 1;
+    }
+    
     .news-sidebar {
+        grid-column: 1;
         order: -1;
     }
     
