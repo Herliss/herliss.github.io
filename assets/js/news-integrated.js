@@ -340,11 +340,13 @@ async function loadAllNews() {
         // Intentar cargar desde caché
         const cachedData = loadFromCache();
         if (cachedData && cachedData.length > 0) {
-            window.newsData = cachedData;
-            window.unfilteredNewsData = [...cachedData];
-            renderNews(cachedData);
+            // Enriquecer datos del caché antes de usarlos
+            const enrichedCache = await enrichAndSortArticles([...cachedData]);
+            window.newsData = enrichedCache;
+            window.unfilteredNewsData = [...enrichedCache];
+            renderNews(enrichedCache);
             if (loading) loading.style.display = 'none';
-            emitNewsLoadedEvent(cachedData);
+            emitNewsLoadedEvent(enrichedCache);
             
             // Actualizar en background
             setTimeout(() => loadNewsInBackground(), 3000);
@@ -392,11 +394,15 @@ async function loadAllNews() {
             return;
         }
         
-        // Guardar en caché
-        saveToCache(allArticles);
-        emitNewsLoadedEvent(allArticles);
+        // Guardar en caché y emitir evento con datos ENRIQUECIDOS
+        const finalEnriched = await enrichAndSortArticles([...allArticles]);
+        window.newsData = finalEnriched;
+        window.unfilteredNewsData = [...finalEnriched];
+        saveToCache(finalEnriched);
+        emitNewsLoadedEvent(finalEnriched);
+        renderNews(finalEnriched);
         
-        console.log(`✅ ${allArticles.length} noticias cargadas`);
+        console.log(`✅ ${finalEnriched.length} noticias cargadas y enriquecidas`);
         
     } catch (error) {
         console.error('❌ Error:', error);
