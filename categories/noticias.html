@@ -32,6 +32,7 @@
     <link rel="stylesheet" href="/assets/css/news.css">
     <link rel="stylesheet" href="/assets/css/news-advanced.css">
     <link rel="stylesheet" href="/assets/css/news-date-widget.css">
+    <link rel="stylesheet" href="/assets/css/sidebar-filters.css">
 </head>
 <body>
     <!-- Header -->
@@ -84,126 +85,86 @@
                 </div>
             </div>
 
-            <!-- Botón para Toggle Filtros Avanzados -->
-            <button class="toggle-advanced-btn" id="toggle-advanced-filters">
-                <span class="icon">⚙️</span>
-                Mostrar Filtros Avanzados de CISO
-            </button>
-
-            <!-- Panel de Filtros Avanzados -->
-            <div class="advanced-filters-panel" id="advanced-filters" style="display: none;">
-                <h3>🔍 Filtros Avanzados para CISO</h3>
-                <p class="subtitle">Priorización basada en relevancia técnica, inteligencia de amenazas y contexto estratégico</p>
-                
-                <div class="filters-grid">
-                    <!-- Relevancia Técnica y Táctica -->
-                    <div class="filter-group">
-                        <label>
-                            <input type="checkbox" id="filter-only-cve">
-                            📋 Solo noticias con CVE
-                        </label>
-                    </div>
-                    
-                    <div class="filter-group">
-                        <label>
-                            🎚️ CVSS Mínimo: <span id="cvss-value" class="range-value">0.0</span>
-                        </label>
-                        <input type="range" id="filter-min-cvss" min="0" max="10" step="0.1" value="0">
-                    </div>
-                    
-                    <div class="filter-group">
-                        <label>
-                            <input type="checkbox" id="filter-only-patch">
-                            ✅ Solo con parche disponible
-                        </label>
-                    </div>
-                    
-                    <!-- Inteligencia de Amenazas -->
-                    <div class="filter-group">
-                        <label>
-                            <input type="checkbox" id="filter-only-iocs">
-                            🔍 Solo con IOCs (IPs, hashes, dominios)
-                        </label>
-                    </div>
-                    
-                    <div class="filter-group">
-                        <label>
-                            <input type="checkbox" id="filter-only-official">
-                            ✓ Solo fuentes oficiales (CISA, Microsoft, etc.)
-                        </label>
-                    </div>
-                    
-                    <!-- Contexto Estratégico -->
-                    <div class="filter-group">
-                        <label>
-                            <input type="checkbox" id="filter-only-regulatory">
-                            📋 Solo temas regulatorios (DORA, NIS2, ISO 27001)
-                        </label>
-                    </div>
-                    
-                    <div class="filter-group">
-                        <label for="filter-severity">⚠️ Nivel de Severidad</label>
-                        <select id="filter-severity">
-                            <option value="all">Todas</option>
-                            <option value="critical">Crítico</option>
-                            <option value="high">Alto</option>
-                            <option value="medium">Medio</option>
-                            <option value="low">Bajo</option>
-                        </select>
-                    </div>
-                    
-                    <!-- Valor Informativo -->
-                    <div class="filter-group">
-                        <label>
-                            ⭐ Relevancia Mínima: <span id="relevance-value" class="range-value">0%</span>
-                        </label>
-                        <input type="range" id="filter-min-relevance" min="0" max="100" step="5" value="0">
-                    </div>
-                    
-                    <div class="filter-group">
-                        <label for="filter-max-days">📅 Publicadas en los últimos</label>
-                        <select id="filter-max-days">
-                            <option value="all">Todas</option>
-                            <option value="1">1 día</option>
-                            <option value="7" selected>7 días</option>
-                            <option value="30">30 días</option>
-                        </select>
-                    </div>
-                </div>
-                
-                <div class="filter-actions">
-                    <span class="filter-count">Mostrando: <strong id="filtered-count">0</strong> noticias</span>
-                    <button class="btn-filter btn-clear" id="clear-advanced-filters">Limpiar Filtros</button>
-                    <button class="btn-filter btn-apply" id="apply-advanced-filters">Aplicar Filtros</button>
-                </div>
-            </div>
-
-            <!-- Loading Indicator -->
-            <div id="loading-indicator" class="loading">
+            <!-- Loading / Error States -->
+            <div id="loading" class="loading">
                 <div class="spinner"></div>
-                <p>Cargando y enriqueciendo noticias de 16 fuentes globales con metadata de seguridad...</p>
+                <p>Cargando noticias de ciberseguridad...</p>
+            </div>
+            
+            <div id="error-message" class="error-message" style="display: none;">
+                <h3>⚠️ Error al cargar noticias</h3>
+                <p>Por favor, recarga la página o intenta más tarde.</p>
             </div>
 
-            <!-- News Grid -->
+            <!-- News Grid (Izquierda) -->
             <div id="news-container" class="news-grid">
                 <!-- Las noticias se cargarán aquí dinámicamente -->
             </div>
 
-            <!-- Error Message -->
-            <div id="error-message" class="error-message" style="display: none;">
-                <h3>⚠️ Error al cargar noticias</h3>
-                <p>No se pudieron cargar las noticias en este momento. Por favor, intenta más tarde.</p>
-            </div>
-
-            <!-- Sidebar -->
+            <!-- Sidebar (Derecha) -->
             <aside class="news-sidebar">
-                <!-- NUEVO: Widget de Clasificación por Fechas -->
+                <!-- Widget de Clasificación por Fechas -->
                 <section class="sidebar-widget date-archive-widget">
                     <h3>📅 Entradas Mensuales</h3>
                     <div id="date-archive-container" class="archive-loading">
                         <div class="spinner"></div>
                         <p>Cargando clasificación...</p>
                     </div>
+                </section>
+
+                <!-- NUEVO: Widget de Filtros Simplificado -->
+                <section class="sidebar-widget sidebar-filters-widget">
+                    <h3>🔍 Filtros Avanzados para CISO</h3>
+                    
+                    <!-- Filtro 1: Relevancia Mínima -->
+                    <div class="sidebar-filter-group">
+                        <label>
+                            <span class="filter-icon">⭐</span>
+                            <span class="filter-label">Relevancia Mínima</span>
+                            <span class="filter-value" id="sidebar-relevance-value">0%</span>
+                        </label>
+                        <input 
+                            type="range" 
+                            id="sidebar-filter-relevance" 
+                            class="sidebar-slider"
+                            min="0" 
+                            max="100" 
+                            step="5" 
+                            value="0"
+                            aria-label="Relevancia mínima">
+                        <div class="slider-markers">
+                            <span>0%</span>
+                            <span>50%</span>
+                            <span>100%</span>
+                        </div>
+                    </div>
+
+                    <!-- Filtro 2: Publicadas en los últimos -->
+                    <div class="sidebar-filter-group">
+                        <label for="sidebar-filter-days">
+                            <span class="filter-icon">📅</span>
+                            <span class="filter-label">Publicadas en los últimos</span>
+                        </label>
+                        <select id="sidebar-filter-days" class="sidebar-select">
+                            <option value="1">1 día</option>
+                            <option value="7" selected>7 días</option>
+                            <option value="30">30 días</option>
+                            <option value="all">Todo el tiempo</option>
+                        </select>
+                    </div>
+
+                    <!-- Info de resultados filtrados -->
+                    <div class="filter-info">
+                        <span class="filter-info-icon">📊</span>
+                        <span class="filter-info-text">
+                            Mostrando: <strong id="sidebar-filtered-count">0</strong> noticias
+                        </span>
+                    </div>
+
+                    <!-- Botón Limpiar Filtros -->
+                    <button id="sidebar-clear-filters" class="sidebar-clear-btn" style="display: none;">
+                        🗑️ Limpiar Filtros
+                    </button>
                 </section>
 
                 <!-- Top Productos Afectados -->
@@ -322,42 +283,6 @@
     <script src="/assets/js/news-ui-filters.js"></script> 
     <script src="/assets/js/news-date-widget.js"></script>
     <script src="/assets/js/news-sidebar-stats.js"></script>
-    
-    <!-- Script para Toggle de Filtros Avanzados -->
-    <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // Toggle para mostrar/ocultar panel de filtros avanzados
-        const toggleBtn = document.getElementById('toggle-advanced-filters');
-        const advancedPanel = document.getElementById('advanced-filters');
-        
-        if (toggleBtn && advancedPanel) {
-            toggleBtn.addEventListener('click', function() {
-                const isVisible = advancedPanel.style.display === 'block';
-                advancedPanel.style.display = isVisible ? 'none' : 'block';
-                this.innerHTML = isVisible 
-                    ? '<span class="icon">⚙️</span> Mostrar Filtros Avanzados de CISO'
-                    : '<span class="icon">❌</span> Ocultar Filtros Avanzados';
-            });
-        }
-        
-        // Actualizar valor del slider CVSS
-        const cvssSlider = document.getElementById('filter-min-cvss');
-        const cvssValue = document.getElementById('cvss-value');
-        if (cvssSlider && cvssValue) {
-            cvssSlider.addEventListener('input', function() {
-                cvssValue.textContent = parseFloat(this.value).toFixed(1);
-            });
-        }
-        
-        // Actualizar valor del slider Relevancia
-        const relevanceSlider = document.getElementById('filter-min-relevance');
-        const relevanceValue = document.getElementById('relevance-value');
-        if (relevanceSlider && relevanceValue) {
-            relevanceSlider.addEventListener('input', function() {
-                relevanceValue.textContent = this.value + '%';
-            });
-        }
-    });
-    </script>
+    <script src="/assets/js/sidebar-filters.js"></script>
 </body>
 </html>

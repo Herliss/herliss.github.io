@@ -1,0 +1,302 @@
+/* ============================================
+   SIDEBAR FILTERS WIDGET - Estilos Optimizados
+   Diseño consistente con "Entradas Mensuales"
+   ============================================ */
+
+.sidebar-filters-widget {
+    background: white;
+    border-radius: 8px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    margin-bottom: 2rem;
+}
+
+.sidebar-filters-widget h3 {
+    font-size: 1.125rem;
+    color: #2c3e50;
+    margin-bottom: 1.5rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid #e0e0e0;
+}
+
+/* === Filter Group === */
+.sidebar-filter-group {
+    margin-bottom: 1.5rem;
+}
+
+.sidebar-filter-group:last-of-type {
+    margin-bottom: 0;
+}
+
+.sidebar-filter-group label {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.75rem;
+    font-weight: 600;
+    font-size: 0.875rem;
+    color: #2c3e50;
+}
+
+.filter-icon {
+    font-size: 1.125rem;
+    margin-right: 0.5rem;
+}
+
+.filter-label {
+    flex: 1;
+}
+
+.filter-value {
+    color: #0066cc;
+    font-weight: 700;
+    font-size: 0.875rem;
+    background: #e3f2fd;
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    border: 1px solid #0066cc;
+}
+
+/* === Sidebar Slider === */
+.sidebar-slider {
+    width: 100%;
+    height: 8px;
+    border-radius: 4px;
+    background: linear-gradient(to right, #e0e0e0 0%, #0066cc 100%);
+    outline: none;
+    cursor: pointer;
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+.sidebar-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #0066cc;
+    cursor: pointer;
+    border: 3px solid white;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+    transition: all 0.3s ease;
+}
+
+.sidebar-slider::-webkit-slider-thumb:hover {
+    background: #0052a3;
+    transform: scale(1.15);
+    box-shadow: 0 3px 10px rgba(0, 102, 204, 0.4);
+}
+
+.sidebar-slider::-moz-range-thumb {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #0066cc;
+    cursor: pointer;
+    border: 3px solid white;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+    transition: all 0.3s ease;
+}
+
+.sidebar-slider::-moz-range-thumb:hover {
+    background: #0052a3;
+    transform: scale(1.15);
+}
+
+/* === Slider Markers === */
+.slider-markers {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 0.5rem;
+    font-size: 0.75rem;
+    color: #666;
+}
+
+/* === Sidebar Select === */
+.sidebar-select {
+    width: 100%;
+    padding: 0.75rem;
+    border: 2px solid #e0e0e0;
+    border-radius: 6px;
+    background: white;
+    color: #2c3e50;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%230066cc' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    background-size: 12px;
+    padding-right: 2.5rem;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+}
+
+.sidebar-select:hover {
+    border-color: #0066cc;
+    box-shadow: 0 2px 8px rgba(0, 102, 204, 0.2);
+}
+
+.sidebar-select:focus {
+    outline: none;
+    border-color: #0066cc;
+    box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.1);
+}
+
+/* === Filter Info === */
+.filter-info {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    background: #f8f9fa;
+    padding: 0.875rem;
+    border-radius: 6px;
+    border-left: 4px solid #0066cc;
+    margin-top: 1.25rem;
+    font-size: 0.875rem;
+}
+
+.filter-info-icon {
+    font-size: 1.25rem;
+    flex-shrink: 0;
+}
+
+.filter-info-text {
+    color: #2c3e50;
+    line-height: 1.4;
+}
+
+.filter-info-text strong {
+    color: #0066cc;
+    font-weight: 700;
+    font-size: 1rem;
+}
+
+/* === Clear Button === */
+.sidebar-clear-btn {
+    width: 100%;
+    padding: 0.75rem;
+    background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin-top: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
+.sidebar-clear-btn:hover {
+    background: linear-gradient(135deg, #c0392b 0%, #a93226 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(231, 76, 60, 0.3);
+}
+
+.sidebar-clear-btn:active {
+    transform: translateY(0);
+}
+
+/* === Active Filter Indicator === */
+.sidebar-filters-widget.has-active-filters {
+    border: 2px solid #27ae60;
+    box-shadow: 0 3px 12px rgba(39, 174, 96, 0.2);
+}
+
+.sidebar-filters-widget.has-active-filters h3::after {
+    content: " ✓";
+    color: #27ae60;
+    font-weight: 700;
+}
+
+/* === Animación al aplicar filtros === */
+@keyframes filterApplied {
+    0%, 100% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.02);
+    }
+}
+
+.sidebar-filters-widget.filter-applied {
+    animation: filterApplied 0.3s ease;
+}
+
+/* === Responsive === */
+@media (max-width: 968px) {
+    .sidebar-filters-widget {
+        margin-bottom: 1.5rem;
+    }
+}
+
+/* === Dark Mode Support === */
+@media (prefers-color-scheme: dark) {
+    .sidebar-filters-widget {
+        background: #2a2a2a;
+        border-color: #0066cc;
+    }
+    
+    .sidebar-filters-widget h3 {
+        color: #ecf0f1;
+        border-bottom-color: #4a4a4a;
+    }
+    
+    .sidebar-filter-group label {
+        color: #ecf0f1;
+    }
+    
+    .filter-value {
+        background: #1a1a1a;
+        color: #0066cc;
+    }
+    
+    .sidebar-select {
+        background-color: #1a1a1a;
+        color: #ecf0f1;
+        border-color: #4a4a4a;
+    }
+    
+    .filter-info {
+        background: #1a1a1a;
+        border-left-color: #0066cc;
+    }
+    
+    .filter-info-text {
+        color: #ecf0f1;
+    }
+}
+
+/* === Accesibilidad === */
+.sidebar-slider:focus,
+.sidebar-select:focus {
+    outline: 2px solid #0066cc;
+    outline-offset: 2px;
+}
+
+/* === Estados de Carga === */
+.sidebar-filters-widget.loading {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+.sidebar-filters-widget.loading::after {
+    content: "Aplicando filtros...";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(0, 102, 204, 0.9);
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    font-size: 0.875rem;
+    font-weight: 600;
+}
