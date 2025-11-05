@@ -611,3 +611,162 @@
         margin-bottom: 1rem;
     }
 }
+/* ============================================
+   ESTILOS PARA BARRA DE PROGRESO OPTIMIZADA
+   Agregar al final de news.css
+   ============================================ */
+
+/* === Progress Bar Container === */
+.progress-bar-container {
+    width: 100%;
+    max-width: 400px;
+    height: 8px;
+    background: #e0e0e0;
+    border-radius: 10px;
+    overflow: hidden;
+    margin: 1rem auto;
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* === Progress Bar Fill === */
+.progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, #0066cc 0%, #00a86b 100%);
+    border-radius: 10px;
+    transition: width 0.3s ease;
+    box-shadow: 0 0 10px rgba(0, 102, 204, 0.5);
+    animation: progressPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes progressPulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.8;
+    }
+}
+
+/* === Progress Text === */
+.progress-text {
+    color: #666;
+    font-size: 0.875rem;
+    font-weight: 600;
+    margin-top: 0.5rem;
+    text-align: center;
+}
+
+/* === Loading Container Improvements === */
+.loading {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 4rem 2rem;
+    min-height: 300px;
+}
+
+.loading .spinner {
+    width: 60px;
+    height: 60px;
+    border: 5px solid #f3f3f3;
+    border-top: 5px solid var(--primary-color);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 1.5rem;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.loading > p {
+    color: var(--text-secondary);
+    font-size: 1.125rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+/* === Cache Info Badge (opcional) === */
+.cache-badge {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: linear-gradient(135deg, #27ae60 0%, #229954 100%);
+    color: white;
+    padding: 0.75rem 1.25rem;
+    border-radius: 25px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    box-shadow: 0 4px 12px rgba(39, 174, 96, 0.3);
+    z-index: 1000;
+    animation: slideInUp 0.5s ease-out;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.cache-badge:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(39, 174, 96, 0.4);
+}
+
+@keyframes slideInUp {
+    from {
+        opacity: 0;
+        transform: translateY(100px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* === Responsive === */
+@media (max-width: 768px) {
+    .progress-bar-container {
+        max-width: 280px;
+    }
+    
+    .loading {
+        padding: 2rem 1rem;
+        min-height: 250px;
+    }
+    
+    .loading .spinner {
+        width: 50px;
+        height: 50px;
+        border-width: 4px;
+    }
+    
+    .loading > p {
+        font-size: 1rem;
+    }
+    
+    .progress-text {
+        font-size: 0.8rem;
+    }
+    
+    .cache-badge {
+        bottom: 10px;
+        right: 10px;
+        padding: 0.625rem 1rem;
+        font-size: 0.8rem;
+    }
+}
+
+/* === Dark Mode Support === */
+@media (prefers-color-scheme: dark) {
+    .progress-bar-container {
+        background: #2a2a2a;
+    }
+    
+    .progress-text {
+        color: #b0b0b0;
+    }
+    
+    .loading > p {
+        color: #b0b0b0;
+    }
+}
