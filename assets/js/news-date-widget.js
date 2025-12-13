@@ -1,11 +1,8 @@
 /**
- * Date Archive Widget - VERSIÓN FINAL v3.1
+ * Date Archive Widget - VERSIÓN 4.2 CORREGIDA
  * 
- * CORRECCIONES CRÍTICAS:
- * ✅ Sincronización perfecta con filtros del sidebar
- * ✅ Efecto acordeón correcto (cierra todos los meses de todos los años)
- * ✅ Usa currentFilteredNews para mostrar solo las noticias filtradas
- * ✅ Actualización automática cuando se aplican filtros
+ * SOLUCIÓN: Fuerza la visibilidad de TODOS los meses
+ * Problema identificado: HTML se generaba pero no se mostraba
  * 
  * Autor: Herliss Briceño
  * Fecha: Noviembre 2025
@@ -21,9 +18,9 @@ const MONTH_NAMES = [
     'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
 ];
 
-// Estado del widget - CRÍTICO para sincronización
+// Estado del widget
 let lastRenderedCount = 0;
-let currentFilteredNews = null; // Guardar las noticias actualmente filtradas
+let currentFilteredNews = null;
 
 // ============================================
 // GENERAR ESTRUCTURA DE ARCHIVO POR FECHA
@@ -31,8 +28,15 @@ let currentFilteredNews = null; // Guardar las noticias actualmente filtradas
 function generateDateArchive(articles) {
     const archive = {};
     
-    articles.forEach(article => {
+    articles.forEach((article, index) => {
         const date = new Date(article.pubDate);
+        
+        // Validar fecha
+        if (isNaN(date.getTime())) {
+            console.warn(`Fecha inválida en artículo ${index}:`, article.pubDate);
+            return;
+        }
+        
         const year = date.getFullYear();
         const month = date.getMonth(); // 0-11
         
@@ -73,18 +77,17 @@ function renderDateArchiveWidget(articles) {
         return;
     }
     
-    // CRÍTICO: Guardar las noticias que estamos renderizando
-    currentFilteredNews = articles;
+    console.log(`📅 Date Widget v4.2: Renderizando ${articles ? articles.length : 0} noticias`);
     
-    // Log para diagnóstico
-    console.log(`📅 Date Widget: Renderizando ${articles ? articles.length : 0} noticias`);
+    // Guardar las noticias que estamos renderizando
+    currentFilteredNews = articles;
     
     // Si no hay artículos, mostrar estado vacío
     if (!articles || articles.length === 0) {
         container.innerHTML = `
             <div class="archive-empty" style="text-align: center; padding: 2rem; color: #999;">
                 <div style="font-size: 3rem; margin-bottom: 1rem;">📭</div>
-                <p>No hay noticias disponibles con los filtros actuales</p>
+                <p style="font-size: 0.875rem;">No hay noticias disponibles</p>
             </div>
         `;
         lastRenderedCount = 0;
@@ -102,277 +105,216 @@ function renderDateArchiveWidget(articles) {
     
     if (years.length === 0) {
         container.innerHTML = `
-            <div class="archive-empty" style="text-align: center; padding: 2rem; color: #999;">
-                <div style="font-size: 3rem; margin-bottom: 1rem;">📭</div>
-                <p>No hay noticias disponibles</p>
+            <div class="archive-empty" style="text-align: center; padding: 2rem; color: #e74c3c;">
+                <div style="font-size: 3rem; margin-bottom: 1rem;">⚠️</div>
+                <p style="font-size: 0.875rem;">Error al procesar fechas</p>
             </div>
         `;
         return;
     }
     
-    // Construir HTML con ACORDEÓN
-    let html = '<div class="archive-accordion">';
+    // CONSTRUIR HTML - VERSIÓN SIMPLIFICADA SIN CLASES PROBLEMÁTICAS
+    let html = '';
     
     years.forEach((year, yearIndex) => {
         const yearData = archive[year];
-        const isOpen = yearIndex === 0; // Primer año abierto por defecto
+        const isYearOpen = yearIndex === 0;
         const yearId = `year-${year}`;
         
+        console.log(`   📅 Año ${year}: ${Object.keys(yearData.months).length} meses, ${yearData.total} noticias`);
+        
+        // HEADER DEL AÑO
         html += `
-            <div class="archive-year" data-year="${year}">
-                <button class="archive-year-header" 
-                        onclick="toggleYear('${yearId}')"
-                        aria-expanded="${isOpen}"
-                        style="width: 100%; display: flex; justify-content: space-between; align-items: center; padding: 0.875rem 1rem; background: linear-gradient(135deg, #3498db 0%, #2980b9 100%); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 1rem; transition: all 0.3s ease; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 0.5rem;">
+            <div style="margin-bottom: 1rem;">
+                <button 
+                    onclick="toggleYear('${yearId}')"
+                    style="width: 100%; display: flex; justify-content: space-between; align-items: center; padding: 0.875rem 1rem; background: linear-gradient(135deg, #3498db 0%, #2980b9 100%); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 1rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 0.5rem;">
                     <span style="display: flex; align-items: center; gap: 0.5rem;">
-                        <span class="toggle-icon" id="icon-${yearId}" style="transition: transform 0.3s ease; display: inline-block; transform: rotate(${isOpen ? '0deg' : '-90deg'});">▼</span>
+                        <span id="icon-${yearId}" style="transition: transform 0.3s ease; display: inline-block; transform: rotate(${isYearOpen ? '90deg' : '0deg'});">▶</span>
                         <span>📅 ${year}</span>
                     </span>
                     <span style="background: rgba(255,255,255,0.3); padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 0.875rem;">
                         Total: ${yearData.total}
                     </span>
                 </button>
-                
-                <div class="archive-months" 
-                     id="${yearId}"
-                     style="display: ${isOpen ? 'block' : 'none'}; padding-left: 0.5rem; margin-bottom: 1rem; border-left: 3px solid #3498db; transition: all 0.3s ease;">
         `;
         
-        // Ordenar meses descendentemente (más reciente primero)
-        const months = Object.keys(yearData.months)
-            .sort((a, b) => b - a);
+        // CONTENEDOR DE MESES - FORZAR VISIBILIDAD
+        html += `<div id="${yearId}" style="display: ${isYearOpen ? 'block' : 'none'}; padding-left: 0.5rem; margin-bottom: 0.5rem; border-left: 3px solid #3498db;">`;
         
-        // Solo el primer mes abierto por defecto
+        // Ordenar meses descendentemente
+        const months = Object.keys(yearData.months).sort((a, b) => b - a);
+        
+        console.log(`      Meses: ${months.map(m => MONTH_NAMES[m]).join(', ')}`);
+        
         months.forEach((monthIndex, idx) => {
             const monthData = yearData.months[monthIndex];
             const monthId = `month-${year}-${monthIndex}`;
-            const isMonthOpen = idx === 0 && isOpen; // Solo primer mes del primer año abierto
+            const isMonthOpen = idx === 0 && isYearOpen;
             
+            // HEADER DEL MES
             html += `
-                <div class="archive-month" data-month="${monthIndex}">
-                    <button class="archive-month-header" 
-                            onclick="toggleMonth('${yearId}', '${monthId}')"
-                            aria-expanded="${isMonthOpen}"
-                            style="width: 100%; display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 1rem; background: white; border: none; border-left: 3px solid #3498db; border-radius: 6px; cursor: pointer; transition: all 0.3s ease; margin-bottom: 0.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.05);"
-                            onmouseover="this.style.background='#f8f9fa'; this.style.transform='translateX(3px)'"
-                            onmouseout="this.style.background='white'; this.style.transform='translateX(0)'">
+                <div style="margin-bottom: 0.5rem;">
+                    <button 
+                        onclick="toggleMonth('${monthId}')"
+                        style="width: 100%; display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 1rem; background: white; border: 1px solid #e0e0e0; border-left: 3px solid #3498db; border-radius: 6px; cursor: pointer; margin-bottom: 0.5rem;">
                         <span style="display: flex; align-items: center; gap: 0.5rem; color: #2c3e50; font-weight: 500;">
-                            <span class="month-toggle-icon" id="icon-${monthId}" style="transition: transform 0.3s ease; display: inline-block; transform: rotate(${isMonthOpen ? '0deg' : '-90deg'});">▶</span>
+                            <span id="icon-${monthId}" style="transition: transform 0.3s ease; font-size: 0.75rem; transform: rotate(${isMonthOpen ? '90deg' : '0deg'});">▶</span>
                             ${monthData.name}
                         </span>
                         <span style="background: #ecf0f1; color: #34495e; padding: 0.25rem 0.6rem; border-radius: 10px; font-size: 0.8rem; font-weight: 600;">
                             Total: ${monthData.count}
                         </span>
                     </button>
-                    
-                    <div class="archive-month-content" 
-                         id="${monthId}"
-                         style="display: ${isMonthOpen ? 'block' : 'none'}; padding: 0.5rem 0 0.5rem 1.5rem; transition: all 0.3s ease;">
-                        <button onclick="filterByMonth('${year}', '${monthIndex}')"
-                                style="width: 100%; padding: 0.75rem 1rem; background: linear-gradient(135deg, #27ae60 0%, #229954 100%); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.875rem; transition: all 0.3s ease; box-shadow: 0 2px 4px rgba(0,0,0,0.1);"
-                                onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 8px rgba(0,0,0,0.15)'"
-                                onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 4px rgba(0,0,0,0.1)'">
-                            📰 Ver ${monthData.count} noticia${monthData.count !== 1 ? 's' : ''} de ${monthData.name}
-                        </button>
-                    </div>
-                </div>
             `;
+            
+            // LISTA DE NOTICIAS
+            html += `<div id="${monthId}" style="display: ${isMonthOpen ? 'block' : 'none'}; padding: 0.5rem 0 0.5rem 1rem; max-height: 400px; overflow-y: auto;">`;
+            html += '<ul style="list-style: none; padding: 0; margin: 0;">';
+            
+            // Artículos del mes
+            monthData.articles
+                .sort((a, b) => new Date(b.pubDate) - new Date(a.pubDate))
+                .forEach(article => {
+                    const articleDate = new Date(article.pubDate);
+                    const formattedDate = `${articleDate.getDate()}/${articleDate.getMonth() + 1}`;
+                    
+                    // Truncar título
+                    const maxLength = 60;
+                    let displayTitle = article.title;
+                    if (displayTitle.length > maxLength) {
+                        displayTitle = displayTitle.substring(0, maxLength) + '...';
+                    }
+                    
+                    html += `
+                        <li style="margin-bottom: 0.5rem;">
+                            <a href="${article.link}" 
+                               target="_blank" 
+                               rel="noopener noreferrer"
+                               style="display: flex; gap: 0.5rem; padding: 0.625rem; background: #f8f9fa; border-radius: 6px; text-decoration: none; color: #2c3e50; font-size: 0.8rem; line-height: 1.4; transition: all 0.3s ease; border-left: 2px solid transparent;"
+                               onmouseover="this.style.background='#e9ecef'; this.style.borderLeftColor='#3498db'; this.style.paddingLeft='0.875rem'"
+                               onmouseout="this.style.background='#f8f9fa'; this.style.borderLeftColor='transparent'; this.style.paddingLeft='0.625rem'"
+                               title="${article.title}">
+                                <span style="color: #7f8c8d; font-weight: 600; flex-shrink: 0; font-size: 0.7rem;">${formattedDate}</span>
+                                <span style="flex: 1; font-weight: 500;">${displayTitle}</span>
+                            </a>
+                        </li>
+                    `;
+                });
+            
+            html += '</ul>';
+            html += '</div>'; // Cerrar lista de noticias
+            html += '</div>'; // Cerrar mes
         });
         
-        html += `
-                </div>
-            </div>
-        `;
+        html += '</div>'; // Cerrar contenedor de meses
+        html += '</div>'; // Cerrar año
     });
-    
-    html += '</div>';
     
     // Actualizar contenedor
     container.innerHTML = html;
     
-    console.log(`✅ Date Widget renderizado: ${articles.length} noticias, ${years.length} años`);
+    console.log(`✅ Widget renderizado: ${articles.length} noticias, ${years.length} año(s)`);
+    
+    // FORZAR RECÁLCULO DEL DOM
+    container.offsetHeight; // Force reflow
 }
 
 // ============================================
-// FUNCIONES DE ACORDEÓN - CORREGIDAS
+// FUNCIONES DE ACORDEÓN
 // ============================================
 
-/**
- * Toggle año (expandir/colapsar)
- */
 function toggleYear(yearId) {
     const yearContent = document.getElementById(yearId);
     const icon = document.getElementById(`icon-${yearId}`);
     
-    if (!yearContent || !icon) return;
-    
-    const isOpen = yearContent.style.display === 'block';
-    
-    // CORRECCIÓN: Cerrar todos los años
-    document.querySelectorAll('.archive-months').forEach(el => {
-        el.style.display = 'none';
-    });
-    
-    // Resetear todos los iconos de año
-    document.querySelectorAll('[id^="icon-year-"]').forEach(el => {
-        el.style.transform = 'rotate(-90deg)';
-    });
-    
-    // Si estaba cerrado, abrirlo
-    if (!isOpen) {
-        yearContent.style.display = 'block';
-        icon.style.transform = 'rotate(0deg)';
-        
-        // Abrir el primer mes automáticamente
-        const firstMonth = yearContent.querySelector('.archive-month-content');
-        const firstMonthIcon = yearContent.querySelector('.month-toggle-icon');
-        if (firstMonth) {
-            firstMonth.style.display = 'block';
-        }
-        if (firstMonthIcon) {
-            firstMonthIcon.style.transform = 'rotate(0deg)';
-        }
-    }
-}
-
-/**
- * Toggle mes (acordeón - CORRECCIÓN: cierra todos los meses de todos los años)
- */
-function toggleMonth(yearId, monthId) {
-    const monthContent = document.getElementById(monthId);
-    const icon = document.getElementById(`icon-${monthId}`);
-    
-    if (!monthContent || !icon) return;
-    
-    const isOpen = monthContent.style.display === 'block';
-    
-    // CORRECCIÓN CRÍTICA: Cerrar TODOS los meses de TODOS los años
-    document.querySelectorAll('.archive-month-content').forEach(el => {
-        el.style.display = 'none';
-    });
-    
-    // Resetear TODOS los iconos de meses
-    document.querySelectorAll('.month-toggle-icon').forEach(el => {
-        el.style.transform = 'rotate(-90deg)';
-    });
-    
-    // Si estaba cerrado, abrirlo
-    if (!isOpen) {
-        monthContent.style.display = 'block';
-        icon.style.transform = 'rotate(0deg)';
-    }
-}
-
-/**
- * Filtrar noticias por mes - CORRECCIÓN: usa currentFilteredNews
- */
-function filterByMonth(year, month) {
-    console.log(`🔍 Filtrando por: ${MONTH_NAMES[month]} ${year}`);
-    
-    // CORRECCIÓN: Usar currentFilteredNews en lugar de unfilteredNewsData
-    const sourceData = currentFilteredNews || window.newsData || window.unfilteredNewsData;
-    
-    if (!sourceData) {
-        console.warn('⚠️ No hay datos para filtrar');
+    if (!yearContent || !icon) {
+        console.warn('Elemento no encontrado:', yearId);
         return;
     }
     
-    // Filtrar noticias por año y mes
-    const filtered = sourceData.filter(article => {
-        const date = new Date(article.pubDate);
-        return date.getFullYear() === parseInt(year) && 
-               date.getMonth() === parseInt(month);
-    });
+    const isCurrentlyOpen = yearContent.style.display !== 'none';
     
-    console.log(`✅ Encontradas ${filtered.length} noticias para ${MONTH_NAMES[month]} ${year}`);
-    
-    // Renderizar noticias filtradas
-    if (typeof window.renderNews === 'function') {
-        window.renderNews(filtered);
+    if (isCurrentlyOpen) {
+        yearContent.style.display = 'none';
+        icon.style.transform = 'rotate(0deg)';
+    } else {
+        yearContent.style.display = 'block';
+        icon.style.transform = 'rotate(90deg)';
     }
-    
-    // Scroll suave al contenedor de noticias
-    const newsContainer = document.getElementById('news-container');
-    if (newsContainer) {
-        newsContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-    
-    // Mostrar feedback visual
-    showFilterFeedback(`${MONTH_NAMES[month]} ${year}`, filtered.length);
 }
 
-/**
- * Mostrar feedback visual cuando se filtra
- */
-function showFilterFeedback(period, count) {
-    // Crear toast notification
-    const toast = document.createElement('div');
-    toast.id = 'date-filter-toast';
-    toast.innerHTML = `
-        <div style="position: fixed; top: 80px; right: 20px; background: linear-gradient(135deg, #27ae60 0%, #229954 100%); color: white; padding: 1rem 1.5rem; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 9999; animation: slideInRight 0.3s ease-out;">
-            <div style="font-weight: 600; margin-bottom: 0.25rem;">✅ Filtrado aplicado</div>
-            <div style="font-size: 0.875rem; opacity: 0.95;">${count} noticia${count !== 1 ? 's' : ''} de ${period}</div>
-        </div>
-    `;
+function toggleMonth(monthId) {
+    const monthContent = document.getElementById(monthId);
+    const icon = document.getElementById(`icon-${monthId}`);
     
-    // Remover toast anterior si existe
-    const oldToast = document.getElementById('date-filter-toast');
-    if (oldToast) oldToast.remove();
+    if (!monthContent || !icon) {
+        console.warn('Elemento no encontrado:', monthId);
+        return;
+    }
     
-    document.body.appendChild(toast);
+    const isCurrentlyOpen = monthContent.style.display !== 'none';
     
-    // Remover después de 3 segundos
-    setTimeout(() => {
-        toast.style.animation = 'slideOutRight 0.3s ease-out';
-        setTimeout(() => toast.remove(), 300);
-    }, 3000);
+    if (isCurrentlyOpen) {
+        // Cerrar mes actual
+        monthContent.style.display = 'none';
+        icon.style.transform = 'rotate(0deg)';
+    } else {
+        // CERRAR TODOS LOS DEMÁS MESES PRIMERO
+        document.querySelectorAll('[id^="month-"]').forEach(el => {
+            if (el.id.startsWith('month-') && el.id !== monthId) {
+                el.style.display = 'none';
+                const elIcon = document.getElementById(`icon-${el.id}`);
+                if (elIcon) elIcon.style.transform = 'rotate(0deg)';
+            }
+        });
+        
+        // Abrir mes seleccionado
+        monthContent.style.display = 'block';
+        icon.style.transform = 'rotate(90deg)';
+    }
 }
 
 // ============================================
-// ACTUALIZACIÓN AUTOMÁTICA - MEJORADA
+// ACTUALIZACIÓN AUTOMÁTICA
 // ============================================
 
 function updateDateWidget() {
-    // CORRECCIÓN CRÍTICA: Detectar qué datos están actualmente en pantalla
     let articlesToRender;
     
-    // Si hay filtros activos del sidebar, usar esos resultados
     if (window.SidebarFilters && window.SidebarFilters.isActive && window.SidebarFilters.isActive()) {
-        console.log('🔍 Date Widget: Detectados filtros activos del sidebar');
-        articlesToRender = window.newsData; // newsData ya contiene los filtrados
+        articlesToRender = window.newsData;
     } else {
-        // Sin filtros, usar todos
         articlesToRender = window.unfilteredNewsData || window.newsData;
     }
     
     if (articlesToRender && articlesToRender.length > 0) {
         if (articlesToRender.length !== lastRenderedCount) {
-            console.log(`🔄 Date Widget: Actualizando de ${lastRenderedCount} a ${articlesToRender.length} noticias`);
+            console.log(`🔄 Actualizando: ${lastRenderedCount} → ${articlesToRender.length} noticias`);
             renderDateArchiveWidget(articlesToRender);
         }
     }
 }
 
 // ============================================
-// INICIALIZACIÓN Y EVENTOS - MEJORADOS
+// INICIALIZACIÓN Y EVENTOS
 // ============================================
 
 function tryInitialize() {
     const articles = window.unfilteredNewsData || window.newsData;
     
     if (articles && articles.length > 0) {
-        console.log(`✅ Date Widget: Inicializando con ${articles.length} noticias`);
+        console.log(`✅ Inicializando con ${articles.length} noticias`);
         renderDateArchiveWidget(articles);
         return true;
     }
     
-    console.log('⏳ Date Widget: Esperando datos...');
+    console.log('⏳ Esperando datos...');
     return false;
 }
 
-// EVENTOS - CORRECCIÓN: Manejar correctamente los datos filtrados
 document.addEventListener('newsLoaded', function(event) {
-    console.log('📢 Date Widget: Evento newsLoaded recibido');
+    console.log('📢 Evento newsLoaded recibido');
     
     if (event.detail && event.detail.articles) {
         renderDateArchiveWidget(event.detail.articles);
@@ -384,24 +326,20 @@ document.addEventListener('newsLoaded', function(event) {
     }
 });
 
-// CORRECCIÓN CRÍTICA: Actualizar con las noticias filtradas
 document.addEventListener('sidebarFiltersApplied', function(event) {
-    console.log('🔍 Date Widget: Filtros del sidebar aplicados');
+    console.log('🔍 Filtros del sidebar aplicados');
     
-    // Esperar un momento para que window.newsData se actualice
     setTimeout(() => {
         if (event.detail && event.detail.results) {
-            console.log(`   📊 Renderizando ${event.detail.results.length} noticias filtradas`);
             renderDateArchiveWidget(event.detail.results);
         } else {
-            // Fallback
             updateDateWidget();
         }
     }, 100);
 });
 
 document.addEventListener('advancedFiltersApplied', function(event) {
-    console.log('🔬 Date Widget: Filtros avanzados aplicados');
+    console.log('🔬 Filtros avanzados aplicados');
     
     setTimeout(() => {
         if (event.detail && event.detail.results) {
@@ -413,14 +351,14 @@ document.addEventListener('advancedFiltersApplied', function(event) {
 });
 
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('📅 Date Widget v3.1: DOM cargado');
+    console.log('📅 Date Widget v4.2 CORREGIDO cargado');
     
     if (!tryInitialize()) {
         setTimeout(tryInitialize, 500);
     }
 });
 
-// Polling como fallback
+// Polling
 let pollAttempts = 0;
 const maxPollAttempts = 20;
 const pollInterval = setInterval(function() {
@@ -429,24 +367,22 @@ const pollInterval = setInterval(function() {
     const articles = window.unfilteredNewsData || window.newsData;
     
     if (articles && articles.length > 0) {
-        console.log('✅ Date Widget: Datos detectados via polling');
+        console.log('✅ Datos detectados via polling');
         clearInterval(pollInterval);
         renderDateArchiveWidget(articles);
     } else if (pollAttempts >= maxPollAttempts) {
-        console.warn('⚠️ Date Widget: Timeout después de 20 segundos');
+        console.warn('⚠️ Timeout después de 20 segundos');
         clearInterval(pollInterval);
     }
 }, 1000);
 
-// Observer para cambios en newsData - CORRECCIÓN: Detectar filtros
+// Observer
 if (window.newsData) {
     let lastCount = 0;
     setInterval(() => {
         if (window.newsData && window.newsData.length !== lastCount) {
             lastCount = window.newsData.length;
-            console.log(`🔄 Date Widget: Detectado cambio (${lastCount} noticias)`);
-            
-            // CORRECCIÓN: Usar newsData actualizado (puede estar filtrado)
+            console.log(`🔄 Cambio detectado: ${lastCount} noticias`);
             renderDateArchiveWidget(window.newsData);
         }
     }, 2000);
@@ -459,49 +395,34 @@ window.renderDateArchiveWidget = renderDateArchiveWidget;
 window.updateDateWidget = updateDateWidget;
 window.toggleYear = toggleYear;
 window.toggleMonth = toggleMonth;
-window.filterByMonth = filterByMonth;
 
-// Agregar estilos de animación
+// Estilos adicionales
 const style = document.createElement('style');
 style.textContent = `
-    @keyframes slideInRight {
-        from {
-            transform: translateX(400px);
-            opacity: 0;
-        }
-        to {
-            transform: translateX(0);
-            opacity: 1;
-        }
+    [id^="month-"]::-webkit-scrollbar {
+        width: 6px;
     }
     
-    @keyframes slideOutRight {
-        from {
-            transform: translateX(0);
-            opacity: 1;
-        }
-        to {
-            transform: translateX(400px);
-            opacity: 0;
-        }
+    [id^="month-"]::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 10px;
     }
     
-    .archive-year-header:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 8px rgba(0,0,0,0.15) !important;
+    [id^="month-"]::-webkit-scrollbar-thumb {
+        background: #3498db;
+        border-radius: 10px;
     }
     
-    .archive-year-header:active {
-        transform: translateY(0);
+    [id^="month-"]::-webkit-scrollbar-thumb:hover {
+        background: #2980b9;
     }
 `;
 document.head.appendChild(style);
 
-// API Global para widget
 window.DateArchiveWidget = {
     render: renderDateArchiveWidget,
     update: updateDateWidget,
     getCurrentFiltered: () => currentFilteredNews
 };
 
-console.log('✅ Date Archive Widget v3.1 - SINCRONIZACIÓN PERFECTA cargado');
+console.log('✅ Date Archive Widget v4.2 - PROBLEMA DE VISIBILIDAD CORREGIDO');
