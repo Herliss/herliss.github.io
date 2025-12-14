@@ -1,0 +1,24 @@
+{
+  "name": "herliss-news-fetcher",
+  "version": "1.0.0",
+  "description": "Automated RSS news fetcher for cybersecurity blog",
+  "main": "fetch-rss-news.js",
+  "scripts": {
+    "fetch": "node fetch-rss-news.js",
+    "test": "node fetch-rss-news.js"
+  },
+  "keywords": [
+    "rss",
+    "news",
+    "cybersecurity",
+    "firestore"
+  ],
+  "author": "Herliss Briceño",
+  "license": "MIT",
+  "dependencies": {
+    "firebase-admin": "^12.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

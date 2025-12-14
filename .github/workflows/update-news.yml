@@ -1,0 +1,48 @@
+name: Update Cybersecurity News
+
+on:
+  # Ejecutar cada hora
+  schedule:
+    - cron: '0 * * * *'  # Cada hora en punto
+  
+  # Permitir ejecución manual desde GitHub
+  workflow_dispatch:
+  
+  # Ejecutar en push a main (para testing)
+  push:
+    branches:
+      - main
+    paths:
+      - 'scripts/fetch-rss-news.js'
+      - '.github/workflows/update-news.yml'
+
+jobs:
+  update-news:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      
+      - name: Install dependencies
+        run: |
+          cd scripts
+          npm install
+      
+      - name: Fetch and update news
+        env:
+          FIREBASE_CONFIG: ${{ secrets.FIREBASE_CONFIG }}
+        run: |
+          cd scripts
+          node fetch-rss-news.js
+      
+      - name: Report status
+        if: always()
+        run: |
+          echo "News update completed at $(date)"
+          echo "Check Firestore for updated news"

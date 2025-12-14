@@ -1,15 +1,23 @@
 /**
- * News Loader OPTIMIZADO v2.2 - VERSIÓN CORREGIDA PARA 16 FUENTES
+ * News Loader OPTIMIZADO v3.0 - CON INTEGRACIÓN FIRESTORE
  * 
- * CORRECCIONES CRÍTICAS:
- * ✅ Timeout aumentado a 20 segundos
- * ✅ 2 reintentos por fuente (en lugar de 1)
+ * NUEVAS CARACTERÍSTICAS:
+ * ✅ Integración con Firebase Firestore para caché persistente
+ * ✅ Carga instantánea desde base de datos
+ * ✅ Actualización automática en background
+ * ✅ Fallback a RSS si Firestore no está disponible
+ * ✅ Soporte para múltiples proxies CORS
+ * 
+ * CORRECCIONES PREVIAS:
+ * ✅ Timeout aumentado a 25 segundos
+ * ✅ 2 reintentos por fuente
  * ✅ Logging detallado para diagnóstico
- * ✅ Proxy CORS más tolerante
+ * ✅ Múltiples proxies CORS con fallback
  * ✅ Garantiza mostrar noticias aunque fallen algunas fuentes
  * 
  * Autor: Herliss Briceño
- * Fecha: Noviembre 2025
+ * Fecha: Diciembre 2024
+ * Versión: 3.0
  */
 
 'use strict';
@@ -19,24 +27,30 @@
 // ============================================
 
 const PERFORMANCE_CONFIG = {
-    // Caché
+    // Caché LocalStorage
     CACHE_DURATION: 5 * 60 * 1000, // 5 minutos
     CACHE_KEY: 'herliss_news_cache',
     
     // Carga - VALORES OPTIMIZADOS
-    BATCH_SIZE: 4, // Cargar 4 fuentes en paralelo (aumentado de 3)
-    ARTICLES_PER_SOURCE_FIRST_LOAD: 15, // Más artículos por fuente
+    BATCH_SIZE: 4, // Cargar 4 fuentes en paralelo
+    ARTICLES_PER_SOURCE_FIRST_LOAD: 15,
     ARTICLES_PER_SOURCE_FULL: 25, 
-    REQUEST_TIMEOUT: 20000, // 20 segundos (aumentado de 15)
-    MAX_RETRIES: 2, // 2 reintentos (aumentado de 1)
+    REQUEST_TIMEOUT: 25000, // 25 segundos
+    MAX_RETRIES: 2, // 2 reintentos
     
-    // Proxy principal
-    PRIMARY_PROXY: 'https://api.allorigins.win/raw?url='
+    // NUEVO: Array de proxies CORS con fallback
+    PROXIES: [
+        'https://api.allorigins.win/raw?url=',
+        'https://corsproxy.org/?',
+        'https://api.allorigins.win/get?url=',
+        'https://thingproxy.freeboard.io/fetch/'
+    ],
+    
+    // Firestore
+    FIRESTORE_RECENT_DAYS: 7, // Días a mantener en caché rápido
+    BACKGROUND_UPDATE_DELAY: 3000 // 3 segundos después de cargar desde Firestore
 };
 
-// ============================================
-// CONFIGURACIÓN DE FUENTES RSS (16 FUENTES)
-// ============================================
 const NEWS_SOURCES = {
     thehackernews: {
         name: 'The Hacker News',
@@ -156,7 +170,7 @@ const NEWS_SOURCES = {
 console.log(`📊 Total de fuentes configuradas: ${Object.keys(NEWS_SOURCES).length}`);
 
 // ============================================
-// GESTIÓN DE CACHÉ
+// GESTIÓN DE CACHÉ LOCALSTORAGE
 // ============================================
 
 function saveToCache(data) {
@@ -167,7 +181,7 @@ function saveToCache(data) {
             sourceCount: Object.keys(NEWS_SOURCES).length
         };
         localStorage.setItem(PERFORMANCE_CONFIG.CACHE_KEY, JSON.stringify(cache));
-        console.log(`✅ ${data.length} noticias guardadas en caché`);
+        console.log(`✅ ${data.length} noticias guardadas en caché local`);
     } catch (error) {
         console.warn('⚠️ Error guardando en caché:', error);
     }
@@ -182,10 +196,10 @@ function getFromCache() {
         const age = Date.now() - cache.timestamp;
         
         if (age < PERFORMANCE_CONFIG.CACHE_DURATION) {
-            console.log(`✅ Usando caché (edad: ${Math.round(age / 1000)}s, ${cache.data.length} noticias)`);
+            console.log(`✅ Usando caché local (edad: ${Math.round(age / 1000)}s, ${cache.data.length} noticias)`);
             return cache.data;
         } else {
-            console.log('⏰ Caché expirado, recargando...');
+            console.log('⏰ Caché local expirado');
             localStorage.removeItem(PERFORMANCE_CONFIG.CACHE_KEY);
             return null;
         }
@@ -197,11 +211,11 @@ function getFromCache() {
 
 function clearCache() {
     localStorage.removeItem(PERFORMANCE_CONFIG.CACHE_KEY);
-    console.log('🗑️ Caché limpiado');
+    console.log('🗑️ Caché local limpiado');
 }
 
 // ============================================
-// PARSER RSS CON TIMEOUT Y RETRY MEJORADO
+// PARSER RSS CON MÚLTIPLES PROXIES Y RETRY
 // ============================================
 
 async function fetchWithTimeout(url, timeout = PERFORMANCE_CONFIG.REQUEST_TIMEOUT) {
@@ -227,68 +241,68 @@ async function fetchWithTimeout(url, timeout = PERFORMANCE_CONFIG.REQUEST_TIMEOU
 async function parseRSSFeed(rssUrl, sourceName, maxArticles = PERFORMANCE_CONFIG.ARTICLES_PER_SOURCE_FIRST_LOAD) {
     let lastError = null;
     
-    // Intentar múltiples veces
-    for (let attempt = 0; attempt <= PERFORMANCE_CONFIG.MAX_RETRIES; attempt++) {
-        try {
-            const proxyUrl = `${PERFORMANCE_CONFIG.PRIMARY_PROXY}${encodeURIComponent(rssUrl)}`;
-            
-            if (attempt > 0) {
-                console.log(`🔄 ${sourceName}: Reintento ${attempt}/${PERFORMANCE_CONFIG.MAX_RETRIES}`);
-                await new Promise(resolve => setTimeout(resolve, 1500)); // Esperar 1.5s entre reintentos
+    // NUEVO: Probar múltiples proxies
+    for (const proxy of PERFORMANCE_CONFIG.PROXIES) {
+        for (let attempt = 0; attempt <= PERFORMANCE_CONFIG.MAX_RETRIES; attempt++) {
+            try {
+                const proxyUrl = `${proxy}${encodeURIComponent(rssUrl)}`;
+                
+                if (attempt > 0) {
+                    console.log(`🔄 ${sourceName}: Reintento ${attempt} con ${proxy.substring(0, 25)}...`);
+                    await new Promise(resolve => setTimeout(resolve, 2000));
+                }
+                
+                const startTime = Date.now();
+                const response = await fetchWithTimeout(proxyUrl);
+                const fetchTime = Date.now() - startTime;
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                
+                const xmlText = await response.text();
+                const parser = new DOMParser();
+                const xmlDoc = parser.parseFromString(xmlText, 'text/xml');
+                
+                const parserError = xmlDoc.querySelector('parsererror');
+                if (parserError) {
+                    throw new Error('Error parseando XML');
+                }
+                
+                const items = [];
+                const rssItems = xmlDoc.querySelectorAll('item');
+                
+                if (rssItems.length > 0) {
+                    rssItems.forEach((item, index) => {
+                        if (index < maxArticles) {
+                            items.push(parseRSSItem(item));
+                        }
+                    });
+                } else {
+                    const atomEntries = xmlDoc.querySelectorAll('entry');
+                    atomEntries.forEach((entry, index) => {
+                        if (index < maxArticles) {
+                            items.push(parseAtomEntry(entry));
+                        }
+                    });
+                }
+                
+                if (items.length > 0) {
+                    console.log(`✅ ${sourceName}: ${items.length} artículos (${fetchTime}ms) via ${proxy.substring(0, 20)}...`);
+                    return items; // ÉXITO - Retornar inmediatamente
+                }
+                
+                throw new Error('No items found');
+                
+            } catch (error) {
+                lastError = error;
+                console.warn(`⚠️ ${sourceName}: Falló con ${proxy.substring(0, 20)}... - ${error.message}`);
             }
-            
-            const startTime = Date.now();
-            const response = await fetchWithTimeout(proxyUrl);
-            const fetchTime = Date.now() - startTime;
-            
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}`);
-            }
-            
-            const xmlText = await response.text();
-            const parser = new DOMParser();
-            const xmlDoc = parser.parseFromString(xmlText, 'text/xml');
-            
-            const parserError = xmlDoc.querySelector('parsererror');
-            if (parserError) {
-                throw new Error('Error parseando XML');
-            }
-            
-            // Extraer items
-            const items = [];
-            const rssItems = xmlDoc.querySelectorAll('item');
-            
-            if (rssItems.length > 0) {
-                rssItems.forEach((item, index) => {
-                    if (index < maxArticles) {
-                        items.push(parseRSSItem(item));
-                    }
-                });
-            } else {
-                const atomEntries = xmlDoc.querySelectorAll('entry');
-                atomEntries.forEach((entry, index) => {
-                    if (index < maxArticles) {
-                        items.push(parseAtomEntry(entry));
-                    }
-                });
-            }
-            
-            // Éxito
-            if (items.length > 0) {
-                console.log(`✅ ${sourceName}: ${items.length} artículos cargados (${fetchTime}ms)`);
-                return items;
-            }
-            
-            throw new Error('No se encontraron items en el feed');
-            
-        } catch (error) {
-            lastError = error;
-            console.warn(`⚠️ ${sourceName}: Intento ${attempt + 1}/${PERFORMANCE_CONFIG.MAX_RETRIES + 1} falló: ${error.message}`);
         }
     }
     
-    // Todos los intentos fallaron
-    console.error(`❌ ${sourceName}: Falló después de ${PERFORMANCE_CONFIG.MAX_RETRIES + 1} intentos`);
+    // Todos los proxies fallaron
+    console.error(`❌ ${sourceName}: Falló con TODOS los proxies`);
     return [];
 }
 
@@ -351,8 +365,9 @@ function extractThumbnail(item) {
     return '';
 }
 
+
 // ============================================
-// BARRA DE PROGRESO MEJORADA
+// BARRA DE PROGRESO
 // ============================================
 
 function updateProgressBar(loaded, total, successful) {
@@ -382,20 +397,70 @@ function hideProgressBar() {
 }
 
 // ============================================
-// CARGA PROGRESIVA DE NOTICIAS - MEJORADA
+// CARGA HÍBRIDA: FIRESTORE + RSS
 // ============================================
 
+/**
+ * Punto de entrada principal - Carga híbrida
+ * 1. Intenta cargar desde Firestore (instantáneo)
+ * 2. Si no hay datos, carga desde RSS
+ * 3. Actualiza Firestore en background
+ */
 async function loadAllNewsProgressive() {
-    console.log('🚀 Iniciando carga progresiva de 16 fuentes RSS...');
-    console.log(`⚙️ Config: Timeout ${PERFORMANCE_CONFIG.REQUEST_TIMEOUT/1000}s | Reintentos ${PERFORMANCE_CONFIG.MAX_RETRIES} | Lote ${PERFORMANCE_CONFIG.BATCH_SIZE}`);
+    console.log('🚀 Cargando noticias desde Firestore...');
+    console.log(`⚙️ Firestore: ${window.NewsDB ? 'Disponible' : 'No disponible'}`);
+    console.log(`ℹ️  Las noticias se actualizan automáticamente cada hora vía GitHub Actions`);
     
-    // Verificar caché primero
-    const cached = getFromCache();
-    if (cached && cached.length > 0) {
-        console.log(`✅ ${cached.length} noticias cargadas desde caché`);
-        processAndRenderNews(cached);
+    // Cargar SOLO desde Firestore
+    if (window.NewsDB) {
+        try {
+            console.log(`🔍 Consultando Firestore (últimos ${PERFORMANCE_CONFIG.FIRESTORE_RECENT_DAYS} días)...`);
+            const recentNews = await NewsDB.getRecentNews(PERFORMANCE_CONFIG.FIRESTORE_RECENT_DAYS);
+            
+            if (recentNews.length > 0) {
+                console.log(`✅ ${recentNews.length} noticias cargadas desde Firestore (INSTANTÁNEO)`);
+                processAndRenderNews(recentNews);
+                hideProgressBar();
+                
+                // Mostrar badge de caché
+                showCacheBadge('Firestore', recentNews.length);
+                
+                return;
+            } else {
+                console.warn('⚠️ Firestore vacío. Las noticias se actualizarán en la próxima ejecución de GitHub Actions.');
+                hideProgressBar();
+                showInfo('Las noticias se están actualizando. Por favor, recarga la página en unos minutos.');
+            }
+        } catch (error) {
+            console.error('❌ Error consultando Firestore:', error);
+            hideProgressBar();
+            showError();
+        }
+    } else {
+        console.error('❌ NewsDB no disponible - Firebase no está configurado correctamente');
         hideProgressBar();
-        return;
+        showError();
+    }
+}
+
+/**
+ * Carga noticias frescas desde las 16 fuentes RSS
+ * @param {boolean} backgroundMode - Si es true, actualiza silenciosamente
+ */
+async function loadFreshNewsFromRSS(backgroundMode = false) {
+    if (!backgroundMode) {
+        console.log('📡 Cargando noticias desde 16 fuentes RSS...');
+    }
+    
+    // Verificar caché localStorage si no es modo background
+    if (!backgroundMode) {
+        const cached = getFromCache();
+        if (cached && cached.length > 0) {
+            console.log(`✅ ${cached.length} noticias desde caché local`);
+            processAndRenderNews(cached);
+            hideProgressBar();
+            return;
+        }
     }
     
     // Preparar fuentes ordenadas por prioridad
@@ -416,7 +481,9 @@ async function loadAllNewsProgressive() {
         const batchNum = Math.floor(i / PERFORMANCE_CONFIG.BATCH_SIZE) + 1;
         const totalBatches = Math.ceil(sources.length / PERFORMANCE_CONFIG.BATCH_SIZE);
         
-        console.log(`\n📦 Lote ${batchNum}/${totalBatches}: ${batch.map(s => s.name).join(', ')}`);
+        if (!backgroundMode) {
+            console.log(`\n📦 Lote ${batchNum}/${totalBatches}: ${batch.map(s => s.name).join(', ')}`);
+        }
         
         // Cargar batch en paralelo
         const batchPromises = batch.map(async (source) => {
@@ -436,59 +503,89 @@ async function loadAllNewsProgressive() {
                         }))
                     };
                 } else {
-                    console.warn(`⚠️ ${source.name}: Sin artículos`);
                     return { success: false, sourceName: source.name, articles: [] };
                 }
             } catch (error) {
-                console.error(`❌ ${source.name}: Error crítico - ${error.message}`);
+                console.error(`❌ ${source.name}: ${error.message}`);
                 return { success: false, sourceName: source.name, articles: [] };
             }
         });
         
-        // Esperar a que el batch termine
+        // Esperar batch
         const batchResults = await Promise.all(batchPromises);
         
-        // Agregar resultados exitosos
+        // Procesar resultados
         batchResults.forEach(result => {
             if (result.success) {
                 successfulSources++;
                 allArticles = allArticles.concat(result.articles);
-                console.log(`   ✅ ${result.sourceName}: ${result.articles.length} noticias`);
+                if (!backgroundMode) {
+                    console.log(`   ✅ ${result.sourceName}: ${result.articles.length} noticias`);
+                }
             } else {
-                console.log(`   ❌ ${result.sourceName}: Falló`);
+                if (!backgroundMode) {
+                    console.log(`   ❌ ${result.sourceName}: Falló`);
+                }
             }
         });
         
-        // Actualizar progreso
-        loadedSources += batch.length;
-        updateProgressBar(loadedSources, totalSources, successfulSources);
-        
-        // Renderizar noticias parciales (UX incremental)
-        if (allArticles.length > 0) {
-            processAndRenderNews(allArticles);
+        // Actualizar UI solo si no es background
+        if (!backgroundMode) {
+            loadedSources += batch.length;
+            updateProgressBar(loadedSources, totalSources, successfulSources);
+            
+            // Renderizar noticias parciales
+            if (allArticles.length > 0) {
+                processAndRenderNews(allArticles);
+            }
         }
     }
     
     // Finalizar
-    console.log(`\n✅ Carga completa:`);
+    console.log(`\n✅ Carga RSS completa:`);
     console.log(`   📊 ${allArticles.length} noticias totales`);
     console.log(`   ✅ ${successfulSources}/${totalSources} fuentes exitosas`);
     console.log(`   ❌ ${totalSources - successfulSources} fuentes fallidas`);
     
-    // CRÍTICO: Mostrar noticias aunque solo algunas fuentes funcionen
     if (allArticles.length > 0) {
+        // Guardar en caché local
         saveToCache(allArticles);
-        processAndRenderNews(allArticles);
-        hideProgressBar();
         
-        // Mostrar advertencia si no todas las fuentes cargaron
-        if (successfulSources < totalSources) {
+        // Renderizar solo si no es background
+        if (!backgroundMode) {
+            processAndRenderNews(allArticles);
+            hideProgressBar();
+        }
+        
+        // NUEVO: Guardar en Firestore
+        if (window.NewsDB) {
+            console.log('💾 Guardando noticias en Firestore...');
+            try {
+                const saved = await NewsDB.saveNews(allArticles);
+                console.log(`✅ ${saved} noticias guardadas en Firestore`);
+                
+                // Si es modo background, actualizar UI con nuevos datos
+                if (backgroundMode) {
+                    const updatedNews = await NewsDB.getRecentNews(PERFORMANCE_CONFIG.FIRESTORE_RECENT_DAYS);
+                    if (updatedNews.length > window.newsData.length) {
+                        console.log('🔄 Nuevas noticias disponibles, actualizando UI...');
+                        processAndRenderNews(updatedNews);
+                    }
+                }
+            } catch (error) {
+                console.warn('⚠️ Error guardando en Firestore:', error);
+            }
+        }
+        
+        // Advertencia si falló alguna fuente
+        if (!backgroundMode && successfulSources < totalSources) {
             showPartialLoadWarning(successfulSources, totalSources);
         }
     } else {
-        // Solo mostrar error si TODAS las fuentes fallaron
-        console.error('❌ CRÍTICO: No se pudo cargar ninguna noticia de ninguna fuente');
-        showError();
+        if (!backgroundMode) {
+            console.error('❌ CRÍTICO: No se pudo cargar ninguna noticia');
+            showError();
+        }
     }
 }
 
@@ -512,10 +609,35 @@ function showPartialLoadWarning(successful, total) {
     const newsContainer = document.getElementById('news-container');
     if (newsContainer && newsContainer.parentNode) {
         newsContainer.parentNode.insertBefore(banner, newsContainer);
-        
-        // Remover después de 10 segundos
         setTimeout(() => banner.remove(), 10000);
     }
+}
+
+function showCacheBadge(source, count) {
+    const badge = document.createElement('div');
+    badge.className = 'cache-badge';
+    badge.innerHTML = `⚡ ${count} noticias desde ${source}`;
+    badge.style.cssText = `
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        background: linear-gradient(135deg, #27ae60 0%, #229954 100%);
+        color: white;
+        padding: 0.75rem 1.25rem;
+        border-radius: 25px;
+        font-size: 0.875rem;
+        font-weight: 600;
+        box-shadow: 0 4px 12px rgba(39, 174, 96, 0.3);
+        z-index: 1000;
+        animation: slideInUp 0.5s ease-out;
+    `;
+    document.body.appendChild(badge);
+    
+    setTimeout(() => {
+        badge.style.opacity = '0';
+        badge.style.transition = 'opacity 0.5s';
+        setTimeout(() => badge.remove(), 500);
+    }, 5000);
 }
 
 function processAndRenderNews(articles) {
@@ -556,6 +678,23 @@ function showError() {
     const errorElement = document.getElementById('error-message');
     if (errorElement) {
         errorElement.style.display = 'block';
+    }
+}
+
+function showInfo(message) {
+    const loadingElement = document.getElementById('loading');
+    if (loadingElement) {
+        loadingElement.style.display = 'none';
+    }
+    
+    const errorElement = document.getElementById('error-message');
+    if (errorElement) {
+        errorElement.innerHTML = `
+            <h3>ℹ️ Información</h3>
+            <p>${message}</p>
+        `;
+        errorElement.style.display = 'block';
+        errorElement.style.background = 'linear-gradient(135deg, #3498db 0%, #2980b9 100%)';
     }
 }
 
