@@ -653,10 +653,12 @@ function processAndRenderNews(articles) {
     window.newsData = articles;
     window.unfilteredNewsData = [...articles];
     
-    // Renderizar
-    renderNews(articles);
+    // Renderizar SOLO LAS 5 MÁS RECIENTES
+    const recentArticles = articles.slice(0, 5);
+    console.log(`📰 Mostrando las 5 noticias más recientes de ${articles.length} totales`);
+    renderNews(recentArticles);
     
-    // Emitir evento
+    // Emitir evento con TODAS las noticias (para widgets)
     const event = new CustomEvent('newsLoaded', {
         detail: {
             articles: articles,
@@ -666,7 +668,7 @@ function processAndRenderNews(articles) {
     });
     document.dispatchEvent(event);
     
-    console.log(`📢 Evento newsLoaded emitido: ${articles.length} noticias`);
+    console.log(`📢 Evento newsLoaded emitido: ${articles.length} noticias disponibles (mostrando 5)`);
 }
 
 function showError() {
