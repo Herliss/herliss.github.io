@@ -190,6 +190,68 @@ function fetchRSS(url) {
 // GENERATE SUMMARY WITH HUGGING FACE
 // ============================================
 
+// ============================================
+// TRANSLATE TO SPANISH WITH LIBRETRANSLATE
+// ============================================
+
+async function translateToSpanish(text) {
+    if (!text || text.length < 3) {
+        return null;
+    }
+    
+    try {
+        const response = await new Promise((resolve, reject) => {
+            const postData = JSON.stringify({
+                q: text.slice(0, 5000), // Limitar input
+                source: 'en',
+                target: 'es',
+                format: 'text'
+            });
+            
+            const options = {
+                hostname: 'libretranslate.com',
+                path: '/translate',
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Content-Length': Buffer.byteLength(postData)
+                },
+                timeout: 10000
+            };
+            
+            const req = https.request(options, (res) => {
+                let data = '';
+                res.on('data', chunk => data += chunk);
+                res.on('end', () => {
+                    if (res.statusCode === 200) {
+                        resolve(JSON.parse(data));
+                    } else {
+                        reject(new Error(`HTTP ${res.statusCode}`));
+                    }
+                });
+            });
+            
+            req.on('error', reject);
+            req.on('timeout', () => {
+                req.destroy();
+                reject(new Error('Timeout'));
+            });
+            
+            req.write(postData);
+            req.end();
+        });
+        
+        return response.translatedText || null;
+    } catch (error) {
+        console.error(`   ⚠️ Error traduciendo: ${error.message}`);
+        return null;
+    }
+}
+
+// ============================================
+// GENERATE SUMMARY WITH HUGGING FACE
+// ============================================
+
 async function generateSummary(text) {
     if (!text || text.length < 50) {
         return null;
@@ -415,6 +477,7 @@ async function saveToFirestore(db, articles) {
             const newsData = {
                 id: newsId,
                 title: article.title,
+                titleEs: article.titleEs || '', // ✅ NUEVO CAMPO
                 link: article.link,
                 description: article.description || '',
                 summaryEs: article.summaryEs || '', // ✅ NUEVO CAMPO
@@ -480,7 +543,7 @@ async function main() {
             if (articles.length > 0) {
                 console.log(`   ✅ ${articles.length} artículos encontrados`);
                 
-                // Enriquecer con metadata y resúmenes
+                // Enriquecer con metadata, resúmenes y traducciones
                 const enrichedArticles = [];
                 for (const article of articles) {
                     const enriched = {
@@ -491,19 +554,29 @@ async function main() {
                         metadata: enrichMetadata(article)
                     };
                     
-                    // Generar resumen (si hay descripción)
+                    // Traducir título
+                    const titleEs = await translateToSpanish(article.title);
+                    if (titleEs) {
+                        enriched.titleEs = titleEs;
+                        console.log(`   🌍 Título traducido: ${titleEs.substring(0, 50)}...`);
+                    }
+                    
+                    // Generar resumen y traducir
                     if (article.description) {
-                        const summary = await generateSummary(article.description);
-                        if (summary) {
-                            enriched.summaryEs = summary;
-                            console.log(`   📝 Resumen generado para: ${article.title.substring(0, 50)}...`);
+                        const summaryEn = await generateSummary(article.description);
+                        if (summaryEn) {
+                            const summaryEs = await translateToSpanish(summaryEn);
+                            if (summaryEs) {
+                                enriched.summaryEs = summaryEs;
+                                console.log(`   📝 Resumen generado y traducido`);
+                            }
                         }
                     }
                     
                     enrichedArticles.push(enriched);
                     
-                    // Pequeño delay para evitar rate limiting
-                    await new Promise(resolve => setTimeout(resolve, 100));
+                    // Delay para evitar rate limiting
+                    await new Promise(resolve => setTimeout(resolve, 200));
                 }
                 
                 allArticles.push(...enrichedArticles);
