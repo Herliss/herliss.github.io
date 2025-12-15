@@ -37,6 +37,7 @@ jobs:
       - name: Fetch and update news
         env:
           FIREBASE_CONFIG: ${{ secrets.FIREBASE_CONFIG }}
+          HUGGINGFACE_TOKEN: ${{ secrets.HUGGINGFACE_TOKEN }}
         run: |
           cd scripts
           node fetch-rss-news.js
@@ -46,3 +47,4 @@ jobs:
         run: |
           echo "News update completed at $(date)"
           echo "Check Firestore for updated news"
+          

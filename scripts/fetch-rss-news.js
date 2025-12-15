@@ -122,6 +122,9 @@ const NEWS_SOURCES = {
 
 const MAX_ARTICLES_PER_SOURCE = 25;
 const REQUEST_TIMEOUT = 30000; // 30 segundos
+const HUGGINGFACE_API = 'https://api-inference.huggingface.co/models/facebook/bart-large-cnn';
+const SUMMARY_MAX_LENGTH = 130;
+const SUMMARY_MIN_LENGTH = 30;
 
 // ============================================
 // INICIALIZAR FIREBASE
@@ -177,6 +180,82 @@ function fetchRSS(url) {
             reject(error);
         });
     });
+}
+
+// ============================================
+// PARSE RSS
+// ============================================
+
+// ============================================
+// GENERATE SUMMARY WITH HUGGING FACE
+// ============================================
+
+async function generateSummary(text) {
+    if (!text || text.length < 50) {
+        return null;
+    }
+    
+    const token = process.env.HUGGINGFACE_TOKEN;
+    if (!token) {
+        console.warn('⚠️ HUGGINGFACE_TOKEN no configurado, omitiendo resúmenes');
+        return null;
+    }
+    
+    try {
+        const response = await new Promise((resolve, reject) => {
+            const url = new URL(HUGGINGFACE_API);
+            const postData = JSON.stringify({
+                inputs: text.slice(0, 1024), // Limitar input
+                parameters: {
+                    max_length: SUMMARY_MAX_LENGTH,
+                    min_length: SUMMARY_MIN_LENGTH,
+                    do_sample: false
+                }
+            });
+            
+            const options = {
+                hostname: url.hostname,
+                path: url.pathname,
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                    'Content-Length': Buffer.byteLength(postData)
+                },
+                timeout: 15000
+            };
+            
+            const req = https.request(options, (res) => {
+                let data = '';
+                res.on('data', chunk => data += chunk);
+                res.on('end', () => {
+                    if (res.statusCode === 200) {
+                        resolve(JSON.parse(data));
+                    } else {
+                        reject(new Error(`HTTP ${res.statusCode}: ${data}`));
+                    }
+                });
+            });
+            
+            req.on('error', reject);
+            req.on('timeout', () => {
+                req.destroy();
+                reject(new Error('Timeout'));
+            });
+            
+            req.write(postData);
+            req.end();
+        });
+        
+        if (Array.isArray(response) && response[0]?.summary_text) {
+            return response[0].summary_text;
+        }
+        
+        return null;
+    } catch (error) {
+        console.error(`   ⚠️ Error generando resumen: ${error.message}`);
+        return null;
+    }
 }
 
 // ============================================
@@ -338,6 +417,7 @@ async function saveToFirestore(db, articles) {
                 title: article.title,
                 link: article.link,
                 description: article.description || '',
+                summaryEs: article.summaryEs || '', // ✅ NUEVO CAMPO
                 pubDate: Timestamp.fromDate(pubDate),
                 sourceName: article.sourceName,
                 sourceColor: article.sourceColor,
@@ -400,14 +480,31 @@ async function main() {
             if (articles.length > 0) {
                 console.log(`   ✅ ${articles.length} artículos encontrados`);
                 
-                // Enriquecer con metadata
-                const enrichedArticles = articles.map(article => ({
-                    ...article,
-                    sourceName: source.name,
-                    sourceColor: source.color,
-                    sourceCategory: source.category,
-                    metadata: enrichMetadata(article)
-                }));
+                // Enriquecer con metadata y resúmenes
+                const enrichedArticles = [];
+                for (const article of articles) {
+                    const enriched = {
+                        ...article,
+                        sourceName: source.name,
+                        sourceColor: source.color,
+                        sourceCategory: source.category,
+                        metadata: enrichMetadata(article)
+                    };
+                    
+                    // Generar resumen (si hay descripción)
+                    if (article.description) {
+                        const summary = await generateSummary(article.description);
+                        if (summary) {
+                            enriched.summaryEs = summary;
+                            console.log(`   📝 Resumen generado para: ${article.title.substring(0, 50)}...`);
+                        }
+                    }
+                    
+                    enrichedArticles.push(enriched);
+                    
+                    // Pequeño delay para evitar rate limiting
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                }
                 
                 allArticles.push(...enrichedArticles);
                 successfulSources++;
