@@ -144,12 +144,15 @@ function applySidebarFilters() {
         console.log(`📊 Resultados: ${filtered.length} de ${window.unfilteredNewsData.length} noticias`);
     }
     
-    // Renderizar noticias filtradas
+    // Renderizar SOLO LAS 5 MÁS RECIENTES (filtradas)
+    const recentFiltered = filtered.slice(0, 5);
+    console.log(`📊 Filtros aplicados: Mostrando 5 de ${filtered.length} resultados`);
+    
     if (typeof window.renderNews === 'function') {
-        window.renderNews(filtered);
+        window.renderNews(recentFiltered);
     }
     
-    // Actualizar contador
+    // Actualizar contador (mostrar total filtrado, no solo las 5 mostradas)
     updateSidebarFilterCount(filtered.length, window.unfilteredNewsData.length);
     
     // Actualizar UI
@@ -189,9 +192,11 @@ function clearSidebarFilters() {
     
     sidebarFiltersActive = false;
     
-    // Restaurar todas las noticias
+    // Restaurar SOLO LAS 5 MÁS RECIENTES
     if (window.unfilteredNewsData && typeof window.renderNews === 'function') {
-        window.renderNews(window.unfilteredNewsData);
+        const recent = window.unfilteredNewsData.slice(0, 5);
+        console.log(`🔄 Mostrando 5 de ${window.unfilteredNewsData.length} noticias totales`);
+        window.renderNews(recent);
     }
     
     // Actualizar contador

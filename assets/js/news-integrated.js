@@ -797,34 +797,45 @@ function renderNews(articles) {
     }
     
     const fragment = document.createDocumentFragment();
-    const groups = groupArticlesByDate(articles);
     
-    Object.keys(groups).forEach(groupKey => {
-        const group = groups[groupKey];
+    // SI HAY 5 O MENOS NOTICIAS: Renderizar directo sin agrupar (evita espacios en blanco)
+    if (articles.length <= 5) {
+        articles.forEach(article => {
+            const newsCard = createNewsCard(article);
+            fragment.appendChild(newsCard);
+        });
+    } 
+    // SI HAY MÁS DE 5: Agrupar por fecha como antes
+    else {
+        const groups = groupArticlesByDate(articles);
         
-        if (group.articles.length > 0) {
-            const groupHeader = document.createElement('div');
-            groupHeader.className = 'news-date-group';
-            groupHeader.innerHTML = `
-                <h3 class="date-group-header">
-                    <span class="date-icon">📅</span>
-                    ${group.label}
-                    <span class="date-count">(${group.articles.length})</span>
-                </h3>
-            `;
-            fragment.appendChild(groupHeader);
+        Object.keys(groups).forEach(groupKey => {
+            const group = groups[groupKey];
             
-            const groupContainer = document.createElement('div');
-            groupContainer.className = 'news-group-container';
-            
-            group.articles.forEach(article => {
-                const newsCard = createNewsCard(article);
-                groupContainer.appendChild(newsCard);
-            });
-            
-            fragment.appendChild(groupContainer);
-        }
-    });
+            if (group.articles.length > 0) {
+                const groupHeader = document.createElement('div');
+                groupHeader.className = 'news-date-group';
+                groupHeader.innerHTML = `
+                    <h3 class="date-group-header">
+                        <span class="date-icon">📅</span>
+                        ${group.label}
+                        <span class="date-count">(${group.articles.length})</span>
+                    </h3>
+                `;
+                fragment.appendChild(groupHeader);
+                
+                const groupContainer = document.createElement('div');
+                groupContainer.className = 'news-group-container';
+                
+                group.articles.forEach(article => {
+                    const newsCard = createNewsCard(article);
+                    groupContainer.appendChild(newsCard);
+                });
+                
+                fragment.appendChild(groupContainer);
+            }
+        });
+    }
     
     newsContainer.appendChild(fragment);
 }
