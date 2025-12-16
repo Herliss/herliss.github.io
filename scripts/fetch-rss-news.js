@@ -402,6 +402,146 @@ function parseRSS(xmlData, sourceName) {
 }
 
 // ============================================
+// CIA+NR SCORE CALCULATION
+// ============================================
+
+/**
+ * Calcula scores de Confidencialidad, Integridad, Disponibilidad y No Repudio
+ * Basado en análisis de keywords en el texto del artículo
+ * 
+ * @param {string} text - Texto del artículo (título + descripción)
+ * @returns {Object} - { confidentiality, integrity, availability, nonRepudiation }
+ */
+function calculateCIAScore(text) {
+    const textLower = text.toLowerCase();
+    
+    const scores = {
+        confidentiality: 0,
+        integrity: 0,
+        availability: 0,
+        nonRepudiation: 0
+    };
+    
+    // ============================================
+    // CONFIDENTIALITY (Confidencialidad)
+    // ============================================
+    const confidentialityKeywords = [
+        // Alto impacto (3 puntos)
+        { words: ['data breach', 'data leak', 'exposed data', 'leaked database', 'credentials leak', 'password dump'], score: 3 },
+        // Medio impacto (2 puntos)
+        { words: ['unauthorized access', 'information disclosure', 'sensitive data', 'personal information', 'privacy breach'], score: 2 },
+        // Bajo impacto (1 punto)
+        { words: ['encryption', 'data exposure', 'confidential', 'private key', 'secret'], score: 1 }
+    ];
+    
+    confidentialityKeywords.forEach(group => {
+        group.words.forEach(keyword => {
+            if (textLower.includes(keyword)) {
+                scores.confidentiality = Math.min(scores.confidentiality + group.score, 10);
+            }
+        });
+    });
+    
+    // ============================================
+    // INTEGRITY (Integridad)
+    // ============================================
+    const integrityKeywords = [
+        // Alto impacto (3 puntos)
+        { words: ['code injection', 'sql injection', 'malware', 'trojan', 'backdoor', 'tampering'], score: 3 },
+        // Medio impacto (2 puntos)
+        { words: ['modification', 'altered', 'corrupted', 'hijacked', 'compromised system'], score: 2 },
+        // Bajo impacto (1 punto)
+        { words: ['integrity', 'checksum', 'verification', 'validation', 'authentication bypass'], score: 1 }
+    ];
+    
+    integrityKeywords.forEach(group => {
+        group.words.forEach(keyword => {
+            if (textLower.includes(keyword)) {
+                scores.integrity = Math.min(scores.integrity + group.score, 10);
+            }
+        });
+    });
+    
+    // ============================================
+    // AVAILABILITY (Disponibilidad)
+    // ============================================
+    const availabilityKeywords = [
+        // Alto impacto (3 puntos)
+        { words: ['ddos', 'denial of service', 'ransomware', 'service outage', 'system down', 'complete shutdown'], score: 3 },
+        // Medio impacto (2 puntos)
+        { words: ['disruption', 'crash', 'downtime', 'unavailable', 'service disruption'], score: 2 },
+        // Bajo impacto (1 punto)
+        { words: ['performance', 'slowdown', 'resource exhaustion', 'availability', 'uptime'], score: 1 }
+    ];
+    
+    availabilityKeywords.forEach(group => {
+        group.words.forEach(keyword => {
+            if (textLower.includes(keyword)) {
+                scores.availability = Math.min(scores.availability + group.score, 10);
+            }
+        });
+    });
+    
+    // ============================================
+    // NON-REPUDIATION (No Repudio)
+    // ============================================
+    const nonRepudiationKeywords = [
+        // Alto impacto (3 puntos)
+        { words: ['certificate', 'digital signature', 'audit log', 'logging disabled', 'log tampering'], score: 3 },
+        // Medio impacto (2 puntos)
+        { words: ['authentication', 'identity', 'tracking', 'accountability', 'forensic'], score: 2 },
+        // Bajo impacto (1 punto)
+        { words: ['timestamp', 'trace', 'record', 'evidence', 'proof'], score: 1 }
+    ];
+    
+    nonRepudiationKeywords.forEach(group => {
+        group.words.forEach(keyword => {
+            if (textLower.includes(keyword)) {
+                scores.nonRepudiation = Math.min(scores.nonRepudiation + group.score, 10);
+            }
+        });
+    });
+    
+    // ============================================
+    // AJUSTES BASADOS EN SEVERIDAD (CVE/CVSS)
+    // ============================================
+    
+    // Si menciona CVE, incrementar relevancia general
+    if (textLower.includes('cve-')) {
+        scores.confidentiality = Math.min(scores.confidentiality + 1, 10);
+        scores.integrity = Math.min(scores.integrity + 1, 10);
+    }
+    
+    // Si menciona CVSS alto, incrementar scores
+    const cvssMatch = textLower.match(/cvss[:\s]+(\d+\.?\d*)/i);
+    if (cvssMatch) {
+        const cvssScore = parseFloat(cvssMatch[1]);
+        if (cvssScore >= 9.0) {
+            // Crítico
+            scores.confidentiality = Math.min(scores.confidentiality + 2, 10);
+            scores.integrity = Math.min(scores.integrity + 2, 10);
+            scores.availability = Math.min(scores.availability + 2, 10);
+        } else if (cvssScore >= 7.0) {
+            // Alto
+            scores.confidentiality = Math.min(scores.confidentiality + 1, 10);
+            scores.integrity = Math.min(scores.integrity + 1, 10);
+            scores.availability = Math.min(scores.availability + 1, 10);
+        }
+    }
+    
+    // ============================================
+    // NORMALIZACIÓN: Asegurar que todos tengan al menos 1 si hay CVE
+    // ============================================
+    if (textLower.includes('cve-') || textLower.includes('vulnerability')) {
+        if (scores.confidentiality === 0) scores.confidentiality = 1;
+        if (scores.integrity === 0) scores.integrity = 1;
+        if (scores.availability === 0) scores.availability = 1;
+    }
+    
+    return scores;
+}
+
+// ============================================
 // METADATA EXTRACTION
 // ============================================
 
@@ -413,8 +553,18 @@ function enrichMetadata(article) {
         cvss: null,
         threatActors: [],
         affectedProducts: [],
-        iocs: []
+        iocs: [],
+        ciaScore: {
+            confidentiality: 0,
+            integrity: 0,
+            availability: 0,
+            nonRepudiation: 0
+        }
     };
+    
+    // Calcular CIA+NR Score
+    const fullText = `${article.title} ${article.description}`;
+    metadata.ciaScore = calculateCIAScore(fullText);
     
     // Extraer CVEs
     const cveMatches = text.match(/cve-\d{4}-\d{4,7}/gi);

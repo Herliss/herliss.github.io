@@ -423,7 +423,7 @@ async function loadAllNewsProgressive() {
                 hideProgressBar();
                 
                 // Mostrar badge de caché
-                showCacheBadge('Firestore', recentNews.length);
+                showCacheBadge(recentNews.length);
                 
                 return;
             } else {
@@ -613,10 +613,19 @@ function showPartialLoadWarning(successful, total) {
     }
 }
 
-function showCacheBadge(source, count) {
+function showCacheBadge(count) {
+    // Obtener mes y año actual
+    const now = new Date();
+    const meses = [
+        'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+        'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+    ];
+    const mesActual = meses[now.getMonth()];
+    const anioActual = now.getFullYear();
+    
     const badge = document.createElement('div');
     badge.className = 'cache-badge';
-    badge.innerHTML = `⚡ ${count} noticias desde ${source}`;
+    badge.innerHTML = `📰 ${count} noticias en ${mesActual} ${anioActual}`;
     badge.style.cssText = `
         position: fixed;
         bottom: 20px;
@@ -723,25 +732,72 @@ function sanitizeHTML(text) {
 }
 
 function classifyNewsByCIANR(article) {
-    const text = `${article.title} ${article.description || ''}`.toLowerCase();
     const tags = [];
     
-    const confidentialityKeywords = ['leak', 'breach', 'data exposure', 'filtración', 'exposición', 'stolen data', 'data theft'];
-    const integrityKeywords = ['malware', 'ransomware', 'tampering', 'modificación', 'corruption', 'altered'];
-    const availabilityKeywords = ['ddos', 'outage', 'downtime', 'caída', 'denegación', 'denial of service'];
-    const nonRepudiationKeywords = ['phishing', 'spoofing', 'impersonation', 'suplantación', 'fraud', 'fake'];
+    // Si no hay metadata o ciaScore, retornar vacío
+    if (!article.metadata || !article.metadata.ciaScore) {
+        return tags;
+    }
     
-    if (confidentialityKeywords.some(k => text.includes(k))) {
-        tags.push({ type: 'confidentiality', label: 'C', icon: '🔴' });
+    const cia = article.metadata.ciaScore;
+    
+    // Función helper para obtener clase de color según score
+    const getScoreClass = (score) => {
+        if (score === 0) return 'none';
+        if (score <= 3) return 'low';
+        if (score <= 6) return 'medium';
+        if (score <= 8) return 'high';
+        return 'critical';
+    };
+    
+    // Función helper para obtener emoji según score
+    const getScoreEmoji = (score) => {
+        if (score === 0) return '⚪';
+        if (score <= 3) return '🟢';
+        if (score <= 6) return '🟡';
+        if (score <= 8) return '🟠';
+        return '🔴';
+    };
+    
+    // Agregar tag solo si score > 0
+    if (cia.confidentiality > 0) {
+        tags.push({
+            type: 'confidentiality',
+            label: `C: ${cia.confidentiality}`,
+            icon: getScoreEmoji(cia.confidentiality),
+            scoreClass: getScoreClass(cia.confidentiality),
+            score: cia.confidentiality
+        });
     }
-    if (integrityKeywords.some(k => text.includes(k))) {
-        tags.push({ type: 'integrity', label: 'I', icon: '🔵' });
+    
+    if (cia.integrity > 0) {
+        tags.push({
+            type: 'integrity',
+            label: `I: ${cia.integrity}`,
+            icon: getScoreEmoji(cia.integrity),
+            scoreClass: getScoreClass(cia.integrity),
+            score: cia.integrity
+        });
     }
-    if (availabilityKeywords.some(k => text.includes(k))) {
-        tags.push({ type: 'availability', label: 'A', icon: '🟠' });
+    
+    if (cia.availability > 0) {
+        tags.push({
+            type: 'availability',
+            label: `A: ${cia.availability}`,
+            icon: getScoreEmoji(cia.availability),
+            scoreClass: getScoreClass(cia.availability),
+            score: cia.availability
+        });
     }
-    if (nonRepudiationKeywords.some(k => text.includes(k))) {
-        tags.push({ type: 'non-repudiation', label: 'NR', icon: '🟣' });
+    
+    if (cia.nonRepudiation > 0) {
+        tags.push({
+            type: 'non-repudiation',
+            label: `NR: ${cia.nonRepudiation}`,
+            icon: getScoreEmoji(cia.nonRepudiation),
+            scoreClass: getScoreClass(cia.nonRepudiation),
+            score: cia.nonRepudiation
+        });
     }
     
     return tags;
@@ -857,7 +913,7 @@ function createNewsCard(article) {
     const ciaTags = classifyNewsByCIANR(article);
     
     const ciaTagsHTML = ciaTags.map(tag => `
-        <span class="cia-tag cia-${tag.type}" title="${tag.label}">
+        <span class="cia-tag cia-${tag.type} cia-score-${tag.scoreClass}" title="${tag.label} (${tag.scoreClass})">
             ${tag.icon} ${tag.label}
         </span>
     `).join('');
