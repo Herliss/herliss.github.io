@@ -3,7 +3,6 @@ name: Update Cybersecurity News with Claude API
 on:
   schedule:
     # Ejecutar cada 6 horas (4 veces al día)
-    # Reducido de cada hora para ahorrar costos
     - cron: '0 */6 * * *'
   workflow_dispatch:  # Permite ejecución manual
 
@@ -14,13 +13,14 @@ jobs:
     
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         
       - name: Setup Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: '20'
           cache: 'npm'
+          cache-dependency-path: 'scripts/package-lock.json'
           
       - name: Install dependencies
         run: |
@@ -35,37 +35,13 @@ jobs:
         run: |
           cd scripts
           node fetch-rss-news.js
-        
-      - name: Send alert on failure
-        if: failure()
-        uses: dawidd6/action-send-mail@v3
-        with:
-          server_address: smtp.gmail.com
-          server_port: 465
-          username: ${{ secrets.EMAIL_USERNAME }}
-          password: ${{ secrets.EMAIL_PASSWORD }}
-          subject: "⚠️ ALERTA: Error en News Fetcher"
-          to: herliss.briceno@gmail.com
-          from: noreply@herliss.dev
-          body: |
-            ❌ El workflow de actualización de noticias ha fallado.
-            
-            Posibles causas:
-            - Límite de API alcanzado
-            - Error de conexión a Firebase
-            - Timeout de ejecución
-            
-            Revisa los logs en:
-            https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
-            
-            Dashboard de costos:
-            https://herliss.github.io/dashboard-api-usage.html
       
       - name: Upload logs artifact
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
-          name: execution-logs
+          name: execution-logs-${{ github.run_number }}
           path: |
             scripts/*.log
           retention-days: 7
+          if-no-files-found: ignore
