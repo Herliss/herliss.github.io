@@ -123,7 +123,6 @@ const NEWS_SOURCES = {
 const MAX_ARTICLES_PER_SOURCE = 25;
 const REQUEST_TIMEOUT = 30000; // 30 segundos
 const HUGGINGFACE_API_SUMMARY = 'https://api-inference.huggingface.co/models/facebook/bart-large-cnn';
-const HUGGINGFACE_API_TRANSLATE = 'https://api-inference.huggingface.co/models/Helsinki-NLP/opus-mt-en-es';
 const SUMMARY_MAX_LENGTH = 130;
 const SUMMARY_MIN_LENGTH = 30;
 
@@ -186,78 +185,6 @@ function fetchRSS(url) {
 // ============================================
 // PARSE RSS
 // ============================================
-
-// ============================================
-// GENERATE SUMMARY WITH HUGGING FACE
-// ============================================
-
-// ============================================
-// TRANSLATE TO SPANISH WITH HUGGING FACE
-// ============================================
-
-async function translateToSpanish(text) {
-    if (!text || text.length < 3) {
-        return null;
-    }
-    
-    const token = process.env.HUGGINGFACE_TOKEN;
-    if (!token) {
-        console.warn('⚠️ HUGGINGFACE_TOKEN no configurado, omitiendo traducciones');
-        return null;
-    }
-    
-    try {
-        const response = await new Promise((resolve, reject) => {
-            const url = new URL(HUGGINGFACE_API_TRANSLATE);
-            const postData = JSON.stringify({
-                inputs: text.slice(0, 1024), // Limitar input
-                options: { wait_for_model: true }
-            });
-            
-            const options = {
-                hostname: url.hostname,
-                path: url.pathname,
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json',
-                    'Content-Length': Buffer.byteLength(postData)
-                },
-                timeout: 15000
-            };
-            
-            const req = https.request(options, (res) => {
-                let data = '';
-                res.on('data', chunk => data += chunk);
-                res.on('end', () => {
-                    if (res.statusCode === 200) {
-                        resolve(JSON.parse(data));
-                    } else {
-                        reject(new Error(`HTTP ${res.statusCode}: ${data}`));
-                    }
-                });
-            });
-            
-            req.on('error', reject);
-            req.on('timeout', () => {
-                req.destroy();
-                reject(new Error('Timeout'));
-            });
-            
-            req.write(postData);
-            req.end();
-        });
-        
-        if (Array.isArray(response) && response[0]?.translation_text) {
-            return response[0].translation_text;
-        }
-        
-        return null;
-    } catch (error) {
-        console.error(`   ⚠️ Error traduciendo: ${error.message}`);
-        return null;
-    }
-}
 
 // ============================================
 // GENERATE SUMMARY WITH HUGGING FACE
@@ -639,10 +566,9 @@ async function saveToFirestore(db, articles) {
             const newsData = {
                 id: newsId,
                 title: article.title,
-                titleEs: article.titleEs || '', // ✅ NUEVO CAMPO
                 link: article.link,
                 description: article.description || '',
-                summaryEs: article.summaryEs || '', // ✅ NUEVO CAMPO
+                summary: article.summary || '', // Resumen en inglés
                 pubDate: Timestamp.fromDate(pubDate),
                 sourceName: article.sourceName,
                 sourceColor: article.sourceColor,
@@ -716,28 +642,18 @@ async function main() {
                         metadata: enrichMetadata(article)
                     };
                     
-                    // Traducir título
-                    const titleEs = await translateToSpanish(article.title);
-                    if (titleEs) {
-                        enriched.titleEs = titleEs;
-                        console.log(`   🌍 Título traducido: ${titleEs.substring(0, 50)}...`);
-                    }
-                    
-                    // Generar resumen y traducir
+                    // Generar resumen en inglés (sin traducir)
                     if (article.description) {
-                        const summaryEn = await generateSummary(article.description);
-                        if (summaryEn) {
-                            const summaryEs = await translateToSpanish(summaryEn);
-                            if (summaryEs) {
-                                enriched.summaryEs = summaryEs;
-                                console.log(`   📝 Resumen generado y traducido`);
-                            }
+                        const summary = await generateSummary(article.description);
+                        if (summary) {
+                            enriched.summary = summary;
+                            console.log(`   📝 Resumen generado: ${summary.substring(0, 50)}...`);
                         }
                     }
                     
                     enrichedArticles.push(enriched);
                     
-                    // Delay para evitar rate limiting (aumentado a 500ms)
+                    // Delay para evitar rate limiting
                     await new Promise(resolve => setTimeout(resolve, 500));
                 }
                 
