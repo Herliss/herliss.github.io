@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard API Usage - Claude</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 2rem;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            margin-bottom: 2rem;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 0.5rem;
+        }
+
+        .subtitle {
+            color: #7f8c8d;
+            font-size: 1.1rem;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            transition: transform 0.2s;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        }
+
+        .stat-label {
+            color: #7f8c8d;
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .stat-value {
+            color: #2c3e50;
+            font-size: 2rem;
+            font-weight: bold;
+        }
+
+        .stat-value.cost {
+            color: #e74c3c;
+        }
+
+        .stat-value.success {
+            color: #27ae60;
+        }
+
+        .stat-value.warning {
+            color: #f39c12;
+        }
+
+        .progress-bar-container {
+            background: #ecf0f1;
+            height: 8px;
+            border-radius: 4px;
+            margin-top: 1rem;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #27ae60 0%, #f39c12 50%, #e74c3c 100%);
+            border-radius: 4px;
+            transition: width 0.3s;
+        }
+
+        .chart-container {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+
+        .table-container {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            background: #f8f9fa;
+            padding: 1rem;
+            text-align: left;
+            font-weight: 600;
+            color: #2c3e50;
+            border-bottom: 2px solid #dee2e6;
+        }
+
+        td {
+            padding: 1rem;
+            border-bottom: 1px solid #dee2e6;
+            color: #495057;
+        }
+
+        tr:hover {
+            background: #f8f9fa;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 12px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .badge-success {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .badge-warning {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .badge-danger {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 3rem;
+            color: #7f8c8d;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .refresh-button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 0.75rem 2rem;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s;
+            margin-top: 1rem;
+        }
+
+        .refresh-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .alert {
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+        }
+
+        .alert-danger {
+            background: #f8d7da;
+            color: #721c24;
+            border-left: 4px solid #e74c3c;
+        }
+
+        .alert-warning {
+            background: #fff3cd;
+            color: #856404;
+            border-left: 4px solid #f39c12;
+        }
+
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border-left: 4px solid #27ae60;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📊 Dashboard API Usage</h1>
+            <p class="subtitle">Monitoreo en tiempo real de Claude API</p>
+            <button class="refresh-button" onclick="loadData()">🔄 Actualizar</button>
+        </div>
+
+        <div id="alerts"></div>
+
+        <div id="loading" class="loading">
+            <div class="spinner"></div>
+            <p>Cargando datos...</p>
+        </div>
+
+        <div id="content" style="display: none;">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-label">💰 Gasto Mensual</div>
+                    <div class="stat-value cost" id="monthlyCost">$0.00</div>
+                    <div class="progress-bar-container">
+                        <div class="progress-bar" id="budgetProgress"></div>
+                    </div>
+                    <small style="color: #7f8c8d; margin-top: 0.5rem; display: block;">
+                        Límite: $4.00 / mes
+                    </small>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-label">🤖 Llamadas API</div>
+                    <div class="stat-value" id="totalCalls">0</div>
+                    <small style="color: #7f8c8d; margin-top: 0.5rem; display: block;">
+                        Límite: 50 / ejecución
+                    </small>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-label">📰 Artículos Procesados</div>
+                    <div class="stat-value success" id="articlesProcessed">0</div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-label">⚡ Tokens Totales</div>
+                    <div class="stat-value" id="totalTokens">0</div>
+                    <small style="color: #7f8c8d; margin-top: 0.5rem; display: block;">
+                        <span id="inputTokens">0</span> input + <span id="outputTokens">0</span> output
+                    </small>
+                </div>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-label">✅ Tasa de Éxito</div>
+                    <div class="stat-value success" id="successRate">100%</div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-label">⚠️ Errores API</div>
+                    <div class="stat-value warning" id="apiErrors">0</div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-label">🔄 Fallback Usado</div>
+                    <div class="stat-value" id="fallbackUsed">0</div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-label">💵 Costo Promedio</div>
+                    <div class="stat-value" id="avgCost">$0.000</div>
+                    <small style="color: #7f8c8d; margin-top: 0.5rem; display: block;">
+                        Por artículo
+                    </small>
+                </div>
+            </div>
+
+            <div class="table-container">
+                <h2 style="margin-bottom: 1.5rem; color: #2c3e50;">📜 Historial de Ejecuciones</h2>
+                <table id="historyTable">
+                    <thead>
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Hora</th>
+                            <th>Artículos</th>
+                            <th>API Calls</th>
+                            <th>Tokens</th>
+                            <th>Costo</th>
+                            <th>Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody id="historyBody">
+                        <tr>
+                            <td colspan="7" style="text-align: center;">Cargando...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+        import { getFirestore, collection, query, where, orderBy, limit, getDocs, Timestamp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+
+        // Configuración de Firebase (REEMPLAZAR con tu configuración)
+        const firebaseConfig = {
+            apiKey: "TU_API_KEY",
+            authDomain: "TU_AUTH_DOMAIN",
+            projectId: "TU_PROJECT_ID",
+            storageBucket: "TU_STORAGE_BUCKET",
+            messagingSenderId: "TU_MESSAGING_SENDER_ID",
+            appId: "TU_APP_ID"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        window.loadData = async function() {
+            const loading = document.getElementById('loading');
+            const content = document.getElementById('content');
+            const alerts = document.getElementById('alerts');
+            
+            loading.style.display = 'block';
+            content.style.display = 'none';
+            alerts.innerHTML = '';
+
+            try {
+                // Obtener datos del mes actual
+                const now = new Date();
+                const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+                
+                const q = query(
+                    collection(db, 'api_usage'),
+                    where('timestamp', '>=', Timestamp.fromDate(monthStart)),
+                    orderBy('timestamp', 'desc'),
+                    limit(50)
+                );
+
+                const snapshot = await getDocs(q);
+                
+                if (snapshot.empty) {
+                    alerts.innerHTML = '<div class="alert alert-warning">⚠️ No hay datos disponibles aún. Ejecuta el workflow primero.</div>';
+                    loading.style.display = 'none';
+                    return;
+                }
+
+                const data = [];
+                let totalCost = 0;
+                let totalCalls = 0;
+                let totalArticles = 0;
+                let totalErrors = 0;
+                let totalFallback = 0;
+                let totalInputTokens = 0;
+                let totalOutputTokens = 0;
+
+                snapshot.forEach(doc => {
+                    const record = doc.data();
+                    data.push(record);
+                    
+                    totalCost += record.actualCost || 0;
+                    totalCalls += record.apiCalls || 0;
+                    totalArticles += record.articlesProcessed || 0;
+                    totalErrors += record.apiErrors || 0;
+                    totalFallback += record.fallbackUsed || 0;
+                    totalInputTokens += record.actualInputTokens || 0;
+                    totalOutputTokens += record.actualOutputTokens || 0;
+                });
+
+                // Actualizar estadísticas
+                document.getElementById('monthlyCost').textContent = `$${totalCost.toFixed(4)}`;
+                document.getElementById('totalCalls').textContent = totalCalls.toLocaleString();
+                document.getElementById('articlesProcessed').textContent = totalArticles.toLocaleString();
+                document.getElementById('totalTokens').textContent = (totalInputTokens + totalOutputTokens).toLocaleString();
+                document.getElementById('inputTokens').textContent = totalInputTokens.toLocaleString();
+                document.getElementById('outputTokens').textContent = totalOutputTokens.toLocaleString();
+                document.getElementById('apiErrors').textContent = totalErrors;
+                document.getElementById('fallbackUsed').textContent = totalFallback;
+                
+                const avgCost = totalArticles > 0 ? totalCost / totalArticles : 0;
+                document.getElementById('avgCost').textContent = `$${avgCost.toFixed(6)}`;
+                
+                const successRate = totalCalls > 0 ? ((totalCalls - totalErrors) / totalCalls * 100) : 100;
+                document.getElementById('successRate').textContent = `${successRate.toFixed(1)}%`;
+
+                // Barra de progreso
+                const budgetProgress = (totalCost / 4.00) * 100;
+                document.getElementById('budgetProgress').style.width = `${Math.min(budgetProgress, 100)}%`;
+
+                // Alertas
+                if (totalCost >= 4.00) {
+                    alerts.innerHTML = '<div class="alert alert-danger">🚨 <strong>LÍMITE ALCANZADO:</strong> Has alcanzado el límite mensual de $4.00</div>';
+                } else if (totalCost >= 3.00) {
+                    alerts.innerHTML = '<div class="alert alert-warning">⚠️ <strong>ALERTA:</strong> Has gastado más de $3.00 este mes</div>';
+                } else {
+                    const remaining = 4.00 - totalCost;
+                    alerts.innerHTML = `<div class="alert alert-success">✅ Presupuesto saludable. Quedan $${remaining.toFixed(4)} disponibles este mes.</div>`;
+                }
+
+                // Tabla de historial
+                const tbody = document.getElementById('historyBody');
+                tbody.innerHTML = '';
+
+                data.forEach(record => {
+                    const date = record.timestamp.toDate();
+                    const row = tbody.insertRow();
+                    
+                    row.innerHTML = `
+                        <td>${date.toLocaleDateString('es-ES')}</td>
+                        <td>${date.toLocaleTimeString('es-ES')}</td>
+                        <td>${record.articlesProcessed || 0}</td>
+                        <td>${record.apiCalls || 0}</td>
+                        <td>${((record.actualInputTokens || 0) + (record.actualOutputTokens || 0)).toLocaleString()}</td>
+                        <td>$${(record.actualCost || 0).toFixed(6)}</td>
+                        <td>
+                            ${record.apiErrors > 0 
+                                ? `<span class="badge badge-warning">${record.apiErrors} errores</span>` 
+                                : '<span class="badge badge-success">✓ Éxito</span>'}
+                        </td>
+                    `;
+                });
+
+                loading.style.display = 'none';
+                content.style.display = 'block';
+
+            } catch (error) {
+                console.error('Error:', error);
+                alerts.innerHTML = `<div class="alert alert-danger">❌ Error cargando datos: ${error.message}</div>`;
+                loading.style.display = 'none';
+            }
+        };
+
+        // Cargar datos al inicio
+        loadData();
+
+        // Auto-refresh cada 5 minutos
+        setInterval(loadData, 5 * 60 * 1000);
+    </script>
+</body>
+</html>

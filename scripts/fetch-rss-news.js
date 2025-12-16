@@ -1,24 +1,51 @@
 /**
- * RSS News Fetcher for GitHub Actions
+ * RSS News Fetcher with Claude API
  * 
- * Este script:
- * 1. Descarga noticias de 16 fuentes RSS
- * 2. Procesa y enriquece con metadata
- * 3. Guarda en Firebase Firestore
- * 
- * Se ejecuta automáticamente cada hora vía GitHub Actions
+ * Features:
+ * - Resumen inteligente con Claude API
+ * - Traducción al español
+ * - CIA+NR scoring automático
+ * - Sistema de protección de costos
+ * - Degradación gradual
+ * - Logging de uso en Firebase
  * 
  * Autor: Herliss Briceño
- * Fecha: Diciembre 2024
+ * Fecha: Diciembre 2025
  */
 
 const https = require('https');
 const http = require('http');
 const { initializeApp, cert } = require('firebase-admin/app');
-const { getFirestore, Timestamp } = require('firebase-admin/firestore');
+const { getFirestore, Timestamp, FieldValue } = require('firebase-admin/firestore');
 
 // ============================================
-// CONFIGURACIÓN
+// CONFIGURACIÓN DE SEGURIDAD
+// ============================================
+
+const SAFETY_CONFIG = {
+    // Límites de presupuesto
+    MONTHLY_BUDGET_LIMIT: 4.00,         // $4 USD/mes máximo
+    ALERT_THRESHOLD: 3.00,              // Alertar a $3 USD
+    DAILY_BUDGET_LIMIT: 0.15,           // ~$4.50/mes si se usa todos los días
+    
+    // Límites por ejecución
+    MAX_CALLS_PER_RUN: 50,              // Máximo 50 llamadas API por workflow
+    MAX_CALLS_PER_ARTICLE: 1,           // 1 llamada batch por artículo
+    
+    // Timeouts
+    API_TIMEOUT: 30000,                 // 30 segundos por llamada
+    
+    // Degradación gradual
+    ENABLE_GRADUAL_DEGRADATION: true,   // Reducir calidad si se acerca al límite
+    ENABLE_FALLBACK: true,              // Usar extractivo si falla API
+    
+    // Precios Claude 3.5 Haiku (por millón de tokens)
+    PRICE_INPUT: 0.80,
+    PRICE_OUTPUT: 4.00
+};
+
+// ============================================
+// CONFIGURACIÓN DE FUENTES RSS
 // ============================================
 
 const NEWS_SOURCES = {
@@ -49,37 +76,37 @@ const NEWS_SOURCES = {
     securityweek: {
         name: 'SecurityWeek',
         rss: 'https://www.securityweek.com/rss/',
-        color: '#e67e22',
+        color: '#3498db',
         category: 'general'
     },
     darkreading: {
         name: 'Dark Reading',
         rss: 'https://www.darkreading.com/rss.xml',
-        color: '#9b59b6',
+        color: '#34495e',
         category: 'general'
     },
-    krebs: {
+    krebsonsecurity: {
         name: 'Krebs on Security',
         rss: 'https://krebsonsecurity.com/feed/',
-        color: '#3498db',
-        category: 'general'
+        color: '#16a085',
+        category: 'blog'
     },
     scmagazine: {
         name: 'SC Magazine',
         rss: 'https://www.scmagazine.com/home/feed/',
-        color: '#16a085',
+        color: '#e67e22',
         category: 'general'
     },
     cybernews: {
         name: 'Cybernews',
         rss: 'https://cybernews.com/feed/',
-        color: '#f39c12',
+        color: '#9b59b6',
         category: 'general'
     },
     talos: {
         name: 'Talos Intelligence',
         rss: 'https://blog.talosintelligence.com/feeds/posts/default',
-        color: '#d35400',
+        color: '#1abc9c',
         category: 'intelligence'
     },
     virustotal: {
@@ -100,31 +127,41 @@ const NEWS_SOURCES = {
         color: '#049fd9',
         category: 'corporate'
     },
-    paloalto: {
+    unit42: {
         name: 'Palo Alto Unit42',
         rss: 'https://unit42.paloaltonetworks.com/feed/',
         color: '#fa582d',
-        category: 'corporate'
+        category: 'intelligence'
     },
     crowdstrike: {
-        name: 'CrowdStrike Blog',
+        name: 'CrowdStrike',
         rss: 'https://www.crowdstrike.com/blog/feed/',
-        color: '#e01f3d',
+        color: '#ec1f26',
         category: 'corporate'
     },
     mandiant: {
         name: 'Mandiant',
         rss: 'https://www.mandiant.com/resources/rss',
-        color: '#ff6633',
+        color: '#ff6600',
         category: 'intelligence'
     }
 };
 
 const MAX_ARTICLES_PER_SOURCE = 25;
-const REQUEST_TIMEOUT = 30000; // 30 segundos
-const HUGGINGFACE_API_SUMMARY = 'https://api-inference.huggingface.co/models/facebook/bart-large-cnn';
-const SUMMARY_MAX_LENGTH = 130;
-const SUMMARY_MIN_LENGTH = 30;
+const REQUEST_TIMEOUT = 30000;
+
+// ============================================
+// CONTADORES GLOBALES
+// ============================================
+
+let apiCallCount = 0;
+let estimatedCost = 0;
+let actualInputTokens = 0;
+let actualOutputTokens = 0;
+let actualCost = 0;
+let articlesProcessed = 0;
+let apiErrors = 0;
+let fallbackUsed = 0;
 
 // ============================================
 // INICIALIZAR FIREBASE
@@ -144,6 +181,462 @@ function initializeFirebase() {
     } catch (error) {
         console.error('❌ Error inicializando Firebase:', error);
         process.exit(1);
+    }
+}
+
+// ============================================
+// MONITOREO DE PRESUPUESTO
+// ============================================
+
+async function checkMonthlyBudget(db) {
+    const now = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    
+    try {
+        const snapshot = await db.collection('api_usage')
+            .where('timestamp', '>=', Timestamp.fromDate(monthStart))
+            .get();
+        
+        let totalCost = 0;
+        let totalCalls = 0;
+        
+        snapshot.forEach(doc => {
+            const data = doc.data();
+            totalCost += data.actualCost || 0;
+            totalCalls += data.apiCalls || 0;
+        });
+        
+        console.log(`\n💰 PRESUPUESTO MENSUAL:`);
+        console.log(`   Gasto acumulado: $${totalCost.toFixed(4)}`);
+        console.log(`   Llamadas totales: ${totalCalls}`);
+        console.log(`   Límite mensual: $${SAFETY_CONFIG.MONTHLY_BUDGET_LIMIT}`);
+        console.log(`   Disponible: $${(SAFETY_CONFIG.MONTHLY_BUDGET_LIMIT - totalCost).toFixed(4)}`);
+        
+        // BLOQUEO AUTOMÁTICO
+        if (totalCost >= SAFETY_CONFIG.MONTHLY_BUDGET_LIMIT) {
+            throw new Error(`🚨 LÍMITE MENSUAL ALCANZADO: $${totalCost.toFixed(2)} / $${SAFETY_CONFIG.MONTHLY_BUDGET_LIMIT}`);
+        }
+        
+        // ALERTA
+        if (totalCost >= SAFETY_CONFIG.ALERT_THRESHOLD) {
+            console.warn(`⚠️ ALERTA: Has gastado $${totalCost.toFixed(2)} de $${SAFETY_CONFIG.MONTHLY_BUDGET_LIMIT}`);
+        }
+        
+        return { totalCost, totalCalls };
+        
+    } catch (error) {
+        if (error.message.includes('LÍMITE MENSUAL')) {
+            throw error;
+        }
+        console.warn('⚠️ No se pudo verificar presupuesto mensual, continuando...');
+        return { totalCost: 0, totalCalls: 0 };
+    }
+}
+
+// ============================================
+// CLAUDE API - BATCH PROCESSING
+// ============================================
+
+async function processArticleWithClaude(article, monthlyBudget) {
+    // Verificar límite por ejecución
+    if (apiCallCount >= SAFETY_CONFIG.MAX_CALLS_PER_RUN) {
+        console.warn(`⚠️ LÍMITE DE EJECUCIÓN ALCANZADO: ${apiCallCount} llamadas`);
+        fallbackUsed++;
+        return generateExtractiveSummary(article);
+    }
+    
+    // Degradación gradual según presupuesto
+    const processingLevel = determineProcessingLevel(monthlyBudget);
+    
+    if (processingLevel === 'none') {
+        console.warn(`⚠️ Presupuesto agotado, usando método extractivo`);
+        fallbackUsed++;
+        return generateExtractiveSummary(article);
+    }
+    
+    const claudeApiKey = process.env.CLAUDE_API_KEY;
+    if (!claudeApiKey) {
+        console.warn('⚠️ CLAUDE_API_KEY no configurado, usando extractivo');
+        fallbackUsed++;
+        return generateExtractiveSummary(article);
+    }
+    
+    try {
+        apiCallCount++;
+        
+        // Construir prompt optimizado
+        const prompt = buildOptimizedPrompt(article, processingLevel);
+        
+        // Estimar costo
+        const estimatedInputTokens = Math.ceil(prompt.length / 4);
+        const estimatedOutputTokens = processingLevel === 'full' ? 400 : 200;
+        const estimatedCallCost = 
+            (estimatedInputTokens / 1000000 * SAFETY_CONFIG.PRICE_INPUT) +
+            (estimatedOutputTokens / 1000000 * SAFETY_CONFIG.PRICE_OUTPUT);
+        
+        estimatedCost += estimatedCallCost;
+        
+        console.log(`   🤖 API call ${apiCallCount}: Nivel ${processingLevel}`);
+        
+        // Llamar a Claude API
+        const result = await callClaudeAPI(prompt, estimatedOutputTokens);
+        
+        // Registrar uso real
+        actualInputTokens += result.usage.input_tokens;
+        actualOutputTokens += result.usage.output_tokens;
+        const callCost = 
+            (result.usage.input_tokens / 1000000 * SAFETY_CONFIG.PRICE_INPUT) +
+            (result.usage.output_tokens / 1000000 * SAFETY_CONFIG.PRICE_OUTPUT);
+        actualCost += callCost;
+        
+        console.log(`   💰 Costo real: $${callCost.toFixed(6)}`);
+        
+        // Parsear respuesta
+        return parseClaudeResponse(result.content, processingLevel);
+        
+    } catch (error) {
+        apiErrors++;
+        console.error(`   ❌ Error en Claude API: ${error.message}`);
+        
+        if (SAFETY_CONFIG.ENABLE_FALLBACK) {
+            console.log(`   🔄 Usando fallback extractivo`);
+            fallbackUsed++;
+            return generateExtractiveSummary(article);
+        }
+        
+        throw error;
+    }
+}
+
+function determineProcessingLevel(monthlyBudget) {
+    const remaining = SAFETY_CONFIG.MONTHLY_BUDGET_LIMIT - monthlyBudget;
+    
+    if (remaining >= 2.00) return 'full';      // Resumen + 2 traducciones
+    if (remaining >= 1.00) return 'medium';    // Solo resumen + traducción de resumen
+    if (remaining >= 0.50) return 'basic';     // Solo resumen en inglés
+    return 'none';                             // Fallback extractivo
+}
+
+function buildOptimizedPrompt(article, level) {
+    const basePrompt = `You are a cybersecurity intelligence assistant processing threat information for CISOs.
+
+Article Title: ${article.title}
+Article Description: ${article.description.substring(0, 1000)}
+
+`;
+    
+    if (level === 'full') {
+        return basePrompt + `Tasks:
+1. Generate a concise 2-3 sentence English summary focusing on: threat, impact, and affected systems
+2. Translate the title to Spanish (keep technical terms like CVE, CVSS, API, IoC in English)
+3. Translate your summary to Spanish (keep technical terms in English)
+
+Return ONLY a JSON object (no markdown formatting):
+{"summary": "English summary", "titleEs": "Título en español", "summaryEs": "Resumen en español"}`;
+    }
+    
+    if (level === 'medium') {
+        return basePrompt + `Tasks:
+1. Generate a concise 2-3 sentence English summary focusing on: threat, impact, and affected systems
+2. Translate your summary to Spanish (keep technical terms like CVE, CVSS, API in English)
+
+Return ONLY a JSON object:
+{"summary": "English summary", "summaryEs": "Resumen en español"}`;
+    }
+    
+    // level === 'basic'
+    return basePrompt + `Task: Generate a concise 2-3 sentence English summary focusing on: threat, impact, and affected systems.
+
+Return ONLY a JSON object:
+{"summary": "English summary"}`;
+}
+
+async function callClaudeAPI(prompt, maxTokens) {
+    return new Promise((resolve, reject) => {
+        const postData = JSON.stringify({
+            model: 'claude-3-5-haiku-20241022',
+            max_tokens: maxTokens,
+            messages: [{
+                role: 'user',
+                content: prompt
+            }]
+        });
+        
+        const options = {
+            hostname: 'api.anthropic.com',
+            path: '/v1/messages',
+            method: 'POST',
+            headers: {
+                'x-api-key': process.env.CLAUDE_API_KEY,
+                'anthropic-version': '2023-06-01',
+                'content-type': 'application/json',
+                'Content-Length': Buffer.byteLength(postData)
+            },
+            timeout: SAFETY_CONFIG.API_TIMEOUT
+        };
+        
+        const req = https.request(options, (res) => {
+            let data = '';
+            res.on('data', chunk => data += chunk);
+            res.on('end', () => {
+                if (res.statusCode === 200) {
+                    try {
+                        resolve(JSON.parse(data));
+                    } catch (error) {
+                        reject(new Error(`JSON parse error: ${error.message}`));
+                    }
+                } else {
+                    reject(new Error(`HTTP ${res.statusCode}: ${data}`));
+                }
+            });
+        });
+        
+        req.on('error', reject);
+        req.on('timeout', () => {
+            req.destroy();
+            reject(new Error('API timeout'));
+        });
+        
+        req.write(postData);
+        req.end();
+    });
+}
+
+function parseClaudeResponse(content, level) {
+    try {
+        const text = content[0].text;
+        
+        // Limpiar markdown si existe
+        const cleanText = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+        
+        const parsed = JSON.parse(cleanText);
+        
+        return {
+            summary: parsed.summary || '',
+            titleEs: parsed.titleEs || '',
+            summaryEs: parsed.summaryEs || ''
+        };
+    } catch (error) {
+        console.error(`   ⚠️ Error parseando respuesta: ${error.message}`);
+        return { summary: '', titleEs: '', summaryEs: '' };
+    }
+}
+
+// ============================================
+// FALLBACK: RESUMEN EXTRACTIVO
+// ============================================
+
+function generateExtractiveSummary(article) {
+    const description = article.description || '';
+    const sentences = description.match(/[^.!?]+[.!?]+/g) || [];
+    const summary = sentences.slice(0, 3).join(' ').trim();
+    const truncated = summary.length > 200 ? summary.substring(0, 200) + '...' : summary;
+    
+    return {
+        summary: truncated || description.substring(0, 200) + '...',
+        titleEs: '',
+        summaryEs: ''
+    };
+}
+
+// ============================================
+// CIA+NR SCORE CALCULATION
+// ============================================
+
+function calculateCIAScore(text) {
+    const textLower = text.toLowerCase();
+    
+    const scores = {
+        confidentiality: 0,
+        integrity: 0,
+        availability: 0,
+        nonRepudiation: 0
+    };
+    
+    // CONFIDENTIALITY
+    const confidentialityKeywords = [
+        { words: ['data breach', 'data leak', 'exposed data', 'leaked database', 'credentials leak', 'password dump'], score: 3 },
+        { words: ['unauthorized access', 'information disclosure', 'sensitive data', 'personal information', 'privacy breach'], score: 2 },
+        { words: ['encryption', 'data exposure', 'confidential', 'private key', 'secret'], score: 1 }
+    ];
+    
+    confidentialityKeywords.forEach(group => {
+        group.words.forEach(keyword => {
+            if (textLower.includes(keyword)) {
+                scores.confidentiality = Math.min(scores.confidentiality + group.score, 10);
+            }
+        });
+    });
+    
+    // INTEGRITY
+    const integrityKeywords = [
+        { words: ['code injection', 'sql injection', 'malware', 'trojan', 'backdoor', 'tampering'], score: 3 },
+        { words: ['modification', 'altered', 'corrupted', 'hijacked', 'compromised system'], score: 2 },
+        { words: ['integrity', 'checksum', 'verification', 'validation', 'authentication bypass'], score: 1 }
+    ];
+    
+    integrityKeywords.forEach(group => {
+        group.words.forEach(keyword => {
+            if (textLower.includes(keyword)) {
+                scores.integrity = Math.min(scores.integrity + group.score, 10);
+            }
+        });
+    });
+    
+    // AVAILABILITY
+    const availabilityKeywords = [
+        { words: ['ddos', 'denial of service', 'ransomware', 'service outage', 'system down', 'complete shutdown'], score: 3 },
+        { words: ['disruption', 'crash', 'downtime', 'unavailable', 'service disruption'], score: 2 },
+        { words: ['performance', 'slowdown', 'resource exhaustion', 'availability', 'uptime'], score: 1 }
+    ];
+    
+    availabilityKeywords.forEach(group => {
+        group.words.forEach(keyword => {
+            if (textLower.includes(keyword)) {
+                scores.availability = Math.min(scores.availability + group.score, 10);
+            }
+        });
+    });
+    
+    // NON-REPUDIATION
+    const nonRepudiationKeywords = [
+        { words: ['certificate', 'digital signature', 'audit log', 'logging disabled', 'log tampering'], score: 3 },
+        { words: ['authentication', 'identity', 'tracking', 'accountability', 'forensic'], score: 2 },
+        { words: ['timestamp', 'trace', 'record', 'evidence', 'proof'], score: 1 }
+    ];
+    
+    nonRepudiationKeywords.forEach(group => {
+        group.words.forEach(keyword => {
+            if (textLower.includes(keyword)) {
+                scores.nonRepudiation = Math.min(scores.nonRepudiation + group.score, 10);
+            }
+        });
+    });
+    
+    // Ajustes basados en CVE/CVSS
+    if (textLower.includes('cve-')) {
+        scores.confidentiality = Math.min(scores.confidentiality + 1, 10);
+        scores.integrity = Math.min(scores.integrity + 1, 10);
+    }
+    
+    const cvssMatch = textLower.match(/cvss[:\s]+(\d+\.?\d*)/i);
+    if (cvssMatch) {
+        const cvssScore = parseFloat(cvssMatch[1]);
+        if (cvssScore >= 9.0) {
+            scores.confidentiality = Math.min(scores.confidentiality + 2, 10);
+            scores.integrity = Math.min(scores.integrity + 2, 10);
+            scores.availability = Math.min(scores.availability + 2, 10);
+        } else if (cvssScore >= 7.0) {
+            scores.confidentiality = Math.min(scores.confidentiality + 1, 10);
+            scores.integrity = Math.min(scores.integrity + 1, 10);
+            scores.availability = Math.min(scores.availability + 1, 10);
+        }
+    }
+    
+    // Normalización
+    if (textLower.includes('cve-') || textLower.includes('vulnerability')) {
+        if (scores.confidentiality === 0) scores.confidentiality = 1;
+        if (scores.integrity === 0) scores.integrity = 1;
+        if (scores.availability === 0) scores.availability = 1;
+    }
+    
+    return scores;
+}
+
+// ============================================
+// METADATA EXTRACTION
+// ============================================
+
+function enrichMetadata(article) {
+    const text = `${article.title} ${article.description}`.toLowerCase();
+    
+    const metadata = {
+        cves: [],
+        cvss: null,
+        threatActors: [],
+        affectedProducts: [],
+        iocs: [],
+        ciaScore: {
+            confidentiality: 0,
+            integrity: 0,
+            availability: 0,
+            nonRepudiation: 0
+        }
+    };
+    
+    // CIA+NR Score
+    const fullText = `${article.title} ${article.description}`;
+    metadata.ciaScore = calculateCIAScore(fullText);
+    
+    // Extraer CVEs
+    const cveMatches = text.match(/cve-\d{4}-\d{4,7}/gi);
+    if (cveMatches) {
+        metadata.cves = [...new Set(cveMatches.map(c => c.toUpperCase()))];
+    }
+    
+    // Extraer CVSS
+    const cvssMatch = text.match(/cvss[:\s]+(\d+\.?\d*)/i);
+    if (cvssMatch) {
+        metadata.cvss = parseFloat(cvssMatch[1]);
+    }
+    
+    // Threat Actors
+    const threatActors = ['apt28', 'apt29', 'apt32', 'apt41', 'lazarus', 'kimsuky', 'fancy bear', 'cozy bear'];
+    threatActors.forEach(actor => {
+        if (text.includes(actor)) {
+            metadata.threatActors.push(actor.toUpperCase());
+        }
+    });
+    
+    // Productos afectados
+    const products = ['windows', 'linux', 'android', 'ios', 'chrome', 'firefox', 'microsoft', 'google', 'apple', 'fortinet', 'cisco'];
+    products.forEach(product => {
+        if (text.includes(product)) {
+            metadata.affectedProducts.push(product.charAt(0).toUpperCase() + product.slice(1));
+        }
+    });
+    
+    return metadata;
+}
+
+// ============================================
+// LOGGING A FIREBASE
+// ============================================
+
+async function logAPIUsage(db) {
+    try {
+        const now = new Date();
+        const usageData = {
+            timestamp: Timestamp.now(),
+            
+            // Contadores
+            apiCalls: apiCallCount,
+            articlesProcessed: articlesProcessed,
+            apiErrors: apiErrors,
+            fallbackUsed: fallbackUsed,
+            
+            // Tokens
+            estimatedInputTokens: Math.ceil(estimatedCost * 1000000 / SAFETY_CONFIG.PRICE_INPUT),
+            estimatedOutputTokens: Math.ceil(estimatedCost * 1000000 / SAFETY_CONFIG.PRICE_OUTPUT),
+            actualInputTokens: actualInputTokens,
+            actualOutputTokens: actualOutputTokens,
+            
+            // Costos
+            estimatedCost: parseFloat(estimatedCost.toFixed(6)),
+            actualCost: parseFloat(actualCost.toFixed(6)),
+            
+            // Metadata temporal
+            month: now.getMonth() + 1,
+            year: now.getFullYear(),
+            day: now.getDate(),
+            hour: now.getHours()
+        };
+        
+        await db.collection('api_usage').add(usageData);
+        console.log('\n✅ Uso de API registrado en Firebase');
+        
+    } catch (error) {
+        console.error('⚠️ Error registrando uso de API:', error.message);
     }
 }
 
@@ -186,83 +679,6 @@ function fetchRSS(url) {
 // PARSE RSS
 // ============================================
 
-// ============================================
-// GENERATE SUMMARY WITH HUGGING FACE
-// ============================================
-
-async function generateSummary(text) {
-    if (!text || text.length < 50) {
-        return null;
-    }
-    
-    const token = process.env.HUGGINGFACE_TOKEN;
-    if (!token) {
-        console.warn('⚠️ HUGGINGFACE_TOKEN no configurado, omitiendo resúmenes');
-        return null;
-    }
-    
-    try {
-        const response = await new Promise((resolve, reject) => {
-            const url = new URL(HUGGINGFACE_API_SUMMARY);
-            const postData = JSON.stringify({
-                inputs: text.slice(0, 1024), // Limitar input
-                parameters: {
-                    max_length: SUMMARY_MAX_LENGTH,
-                    min_length: SUMMARY_MIN_LENGTH,
-                    do_sample: false
-                },
-                options: { wait_for_model: true }
-            });
-            
-            const options = {
-                hostname: url.hostname,
-                path: url.pathname,
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json',
-                    'Content-Length': Buffer.byteLength(postData)
-                },
-                timeout: 15000
-            };
-            
-            const req = https.request(options, (res) => {
-                let data = '';
-                res.on('data', chunk => data += chunk);
-                res.on('end', () => {
-                    if (res.statusCode === 200) {
-                        resolve(JSON.parse(data));
-                    } else {
-                        reject(new Error(`HTTP ${res.statusCode}: ${data}`));
-                    }
-                });
-            });
-            
-            req.on('error', reject);
-            req.on('timeout', () => {
-                req.destroy();
-                reject(new Error('Timeout'));
-            });
-            
-            req.write(postData);
-            req.end();
-        });
-        
-        if (Array.isArray(response) && response[0]?.summary_text) {
-            return response[0].summary_text;
-        }
-        
-        return null;
-    } catch (error) {
-        console.error(`   ⚠️ Error generando resumen: ${error.message}`);
-        return null;
-    }
-}
-
-// ============================================
-// PARSE RSS
-// ============================================
-
 function parseRSSItem(itemXML) {
     const getContent = (tag) => {
         const regex = new RegExp(`<${tag}[^>]*><!\\[CDATA\\[([\\s\\S]*?)\\]\\]><\/${tag}>|<${tag}[^>]*>([^<]*)<\/${tag}>`, 'i');
@@ -293,19 +709,29 @@ function parseRSSItem(itemXML) {
         return new Date();
     };
     
+    const getThumbnail = () => {
+        const mediaMatch = itemXML.match(/<media:content[^>]+url=["']([^"']+)["']/i);
+        if (mediaMatch) return mediaMatch[1];
+        
+        const enclosureMatch = itemXML.match(/<enclosure[^>]+url=["']([^"']+)["'][^>]+type=["']image/i);
+        if (enclosureMatch) return enclosureMatch[1];
+        
+        return '';
+    };
+    
     return {
         title: getContent('title'),
         link: getLink(),
         description: getContent('description') || getContent('summary'),
         pubDate: getPubDate(),
-        author: getContent('author') || getContent('dc:creator')
+        author: getContent('author') || getContent('dc:creator'),
+        thumbnail: getThumbnail()
     };
 }
 
 function parseRSS(xmlData, sourceName) {
     const items = [];
     
-    // Extraer items
     const itemRegex = /<item[\s\S]*?<\/item>|<entry[\s\S]*?<\/entry>/gi;
     const matches = xmlData.match(itemRegex);
     
@@ -314,14 +740,10 @@ function parseRSS(xmlData, sourceName) {
         return items;
     }
     
-    for (let i = 0; i < Math.min(matches.length, MAX_ARTICLES_PER_SOURCE); i++) {
-        try {
-            const item = parseRSSItem(matches[i]);
-            if (item.title && item.link) {
-                items.push(item);
-            }
-        } catch (error) {
-            console.error(`❌ Error parsing item from ${sourceName}:`, error);
+    for (const match of matches.slice(0, MAX_ARTICLES_PER_SOURCE)) {
+        const item = parseRSSItem(match);
+        if (item.title && item.link) {
+            items.push(item);
         }
     }
     
@@ -329,246 +751,34 @@ function parseRSS(xmlData, sourceName) {
 }
 
 // ============================================
-// CIA+NR SCORE CALCULATION
+// GUARDAR EN FIREBASE
 // ============================================
-
-/**
- * Calcula scores de Confidencialidad, Integridad, Disponibilidad y No Repudio
- * Basado en análisis de keywords en el texto del artículo
- * 
- * @param {string} text - Texto del artículo (título + descripción)
- * @returns {Object} - { confidentiality, integrity, availability, nonRepudiation }
- */
-function calculateCIAScore(text) {
-    const textLower = text.toLowerCase();
-    
-    const scores = {
-        confidentiality: 0,
-        integrity: 0,
-        availability: 0,
-        nonRepudiation: 0
-    };
-    
-    // ============================================
-    // CONFIDENTIALITY (Confidencialidad)
-    // ============================================
-    const confidentialityKeywords = [
-        // Alto impacto (3 puntos)
-        { words: ['data breach', 'data leak', 'exposed data', 'leaked database', 'credentials leak', 'password dump'], score: 3 },
-        // Medio impacto (2 puntos)
-        { words: ['unauthorized access', 'information disclosure', 'sensitive data', 'personal information', 'privacy breach'], score: 2 },
-        // Bajo impacto (1 punto)
-        { words: ['encryption', 'data exposure', 'confidential', 'private key', 'secret'], score: 1 }
-    ];
-    
-    confidentialityKeywords.forEach(group => {
-        group.words.forEach(keyword => {
-            if (textLower.includes(keyword)) {
-                scores.confidentiality = Math.min(scores.confidentiality + group.score, 10);
-            }
-        });
-    });
-    
-    // ============================================
-    // INTEGRITY (Integridad)
-    // ============================================
-    const integrityKeywords = [
-        // Alto impacto (3 puntos)
-        { words: ['code injection', 'sql injection', 'malware', 'trojan', 'backdoor', 'tampering'], score: 3 },
-        // Medio impacto (2 puntos)
-        { words: ['modification', 'altered', 'corrupted', 'hijacked', 'compromised system'], score: 2 },
-        // Bajo impacto (1 punto)
-        { words: ['integrity', 'checksum', 'verification', 'validation', 'authentication bypass'], score: 1 }
-    ];
-    
-    integrityKeywords.forEach(group => {
-        group.words.forEach(keyword => {
-            if (textLower.includes(keyword)) {
-                scores.integrity = Math.min(scores.integrity + group.score, 10);
-            }
-        });
-    });
-    
-    // ============================================
-    // AVAILABILITY (Disponibilidad)
-    // ============================================
-    const availabilityKeywords = [
-        // Alto impacto (3 puntos)
-        { words: ['ddos', 'denial of service', 'ransomware', 'service outage', 'system down', 'complete shutdown'], score: 3 },
-        // Medio impacto (2 puntos)
-        { words: ['disruption', 'crash', 'downtime', 'unavailable', 'service disruption'], score: 2 },
-        // Bajo impacto (1 punto)
-        { words: ['performance', 'slowdown', 'resource exhaustion', 'availability', 'uptime'], score: 1 }
-    ];
-    
-    availabilityKeywords.forEach(group => {
-        group.words.forEach(keyword => {
-            if (textLower.includes(keyword)) {
-                scores.availability = Math.min(scores.availability + group.score, 10);
-            }
-        });
-    });
-    
-    // ============================================
-    // NON-REPUDIATION (No Repudio)
-    // ============================================
-    const nonRepudiationKeywords = [
-        // Alto impacto (3 puntos)
-        { words: ['certificate', 'digital signature', 'audit log', 'logging disabled', 'log tampering'], score: 3 },
-        // Medio impacto (2 puntos)
-        { words: ['authentication', 'identity', 'tracking', 'accountability', 'forensic'], score: 2 },
-        // Bajo impacto (1 punto)
-        { words: ['timestamp', 'trace', 'record', 'evidence', 'proof'], score: 1 }
-    ];
-    
-    nonRepudiationKeywords.forEach(group => {
-        group.words.forEach(keyword => {
-            if (textLower.includes(keyword)) {
-                scores.nonRepudiation = Math.min(scores.nonRepudiation + group.score, 10);
-            }
-        });
-    });
-    
-    // ============================================
-    // AJUSTES BASADOS EN SEVERIDAD (CVE/CVSS)
-    // ============================================
-    
-    // Si menciona CVE, incrementar relevancia general
-    if (textLower.includes('cve-')) {
-        scores.confidentiality = Math.min(scores.confidentiality + 1, 10);
-        scores.integrity = Math.min(scores.integrity + 1, 10);
-    }
-    
-    // Si menciona CVSS alto, incrementar scores
-    const cvssMatch = textLower.match(/cvss[:\s]+(\d+\.?\d*)/i);
-    if (cvssMatch) {
-        const cvssScore = parseFloat(cvssMatch[1]);
-        if (cvssScore >= 9.0) {
-            // Crítico
-            scores.confidentiality = Math.min(scores.confidentiality + 2, 10);
-            scores.integrity = Math.min(scores.integrity + 2, 10);
-            scores.availability = Math.min(scores.availability + 2, 10);
-        } else if (cvssScore >= 7.0) {
-            // Alto
-            scores.confidentiality = Math.min(scores.confidentiality + 1, 10);
-            scores.integrity = Math.min(scores.integrity + 1, 10);
-            scores.availability = Math.min(scores.availability + 1, 10);
-        }
-    }
-    
-    // ============================================
-    // NORMALIZACIÓN: Asegurar que todos tengan al menos 1 si hay CVE
-    // ============================================
-    if (textLower.includes('cve-') || textLower.includes('vulnerability')) {
-        if (scores.confidentiality === 0) scores.confidentiality = 1;
-        if (scores.integrity === 0) scores.integrity = 1;
-        if (scores.availability === 0) scores.availability = 1;
-    }
-    
-    return scores;
-}
-
-// ============================================
-// METADATA EXTRACTION
-// ============================================
-
-function enrichMetadata(article) {
-    const text = `${article.title} ${article.description}`.toLowerCase();
-    
-    const metadata = {
-        cves: [],
-        cvss: null,
-        threatActors: [],
-        affectedProducts: [],
-        iocs: [],
-        ciaScore: {
-            confidentiality: 0,
-            integrity: 0,
-            availability: 0,
-            nonRepudiation: 0
-        }
-    };
-    
-    // Calcular CIA+NR Score
-    const fullText = `${article.title} ${article.description}`;
-    metadata.ciaScore = calculateCIAScore(fullText);
-    
-    // Extraer CVEs
-    const cveMatches = text.match(/cve-\d{4}-\d{4,7}/gi);
-    if (cveMatches) {
-        metadata.cves = [...new Set(cveMatches.map(c => c.toUpperCase()))];
-    }
-    
-    // Extraer CVSS
-    const cvssMatch = text.match(/cvss[:\s]+(\d+\.?\d*)/i);
-    if (cvssMatch) {
-        metadata.cvss = parseFloat(cvssMatch[1]);
-    }
-    
-    // Threat Actors comunes
-    const threatActors = ['apt28', 'apt29', 'apt32', 'apt41', 'lazarus', 'kimsuky', 'fancy bear', 'cozy bear'];
-    threatActors.forEach(actor => {
-        if (text.includes(actor)) {
-            metadata.threatActors.push(actor.toUpperCase());
-        }
-    });
-    
-    // Productos afectados
-    const products = ['windows', 'linux', 'android', 'ios', 'chrome', 'firefox', 'microsoft', 'google', 'apple'];
-    products.forEach(product => {
-        if (text.includes(product)) {
-            metadata.affectedProducts.push(product.charAt(0).toUpperCase() + product.slice(1));
-        }
-    });
-    
-    return metadata;
-}
-
-// ============================================
-// GUARDAR EN FIRESTORE
-// ============================================
-
-function generateNewsId(url) {
-    let hash = 0;
-    const cleanUrl = url.toLowerCase().trim();
-    
-    for (let i = 0; i < cleanUrl.length; i++) {
-        const char = cleanUrl.charCodeAt(i);
-        hash = ((hash << 5) - hash) + char;
-        hash = hash & hash;
-    }
-    
-    return 'news_' + Math.abs(hash).toString(36);
-}
 
 async function saveToFirestore(db, articles) {
-    if (articles.length === 0) {
-        console.log('📝 No hay noticias para guardar');
-        return 0;
-    }
-    
-    console.log(`💾 Guardando ${articles.length} noticias en Firestore...`);
+    console.log(`\n💾 Guardando ${articles.length} noticias en Firestore...`);
     
     const batch = db.batch();
     let saved = 0;
     
     for (const article of articles) {
         try {
-            const newsId = generateNewsId(article.link);
+            const newsId = `news_${Buffer.from(article.link)
+                .toString('base64')
+                .replace(/[^a-zA-Z0-9]/g, '')
+                .substring(0, 6)}`;
+            
             const newsRef = db.collection('news').doc(newsId);
             
             const pubDate = new Date(article.pubDate);
-            if (isNaN(pubDate.getTime())) {
-                console.warn(`⚠️ Fecha inválida para: ${article.title}`);
-                continue;
-            }
             
             const newsData = {
                 id: newsId,
                 title: article.title,
+                titleEs: article.titleEs || '',
                 link: article.link,
                 description: article.description || '',
-                summary: article.summary || '', // Resumen en inglés
+                summary: article.summary || '',
+                summaryEs: article.summaryEs || '',
                 pubDate: Timestamp.fromDate(pubDate),
                 sourceName: article.sourceName,
                 sourceColor: article.sourceColor,
@@ -587,43 +797,44 @@ async function saveToFirestore(db, articles) {
             batch.set(newsRef, newsData, { merge: true });
             saved++;
             
-            // Commit cada 500 documentos (límite de Firestore)
             if (saved % 500 === 0) {
                 await batch.commit();
                 console.log(`✅ Batch guardado: ${saved} noticias`);
             }
         } catch (error) {
-            console.error(`❌ Error guardando noticia "${article.title}":`, error);
+            console.error(`❌ Error guardando noticia "${article.title}":`, error.message);
         }
     }
     
-    // Commit final
     if (saved % 500 !== 0) {
         await batch.commit();
     }
     
-    console.log(`✅ Total guardado: ${saved} noticias en Firestore`);
+    console.log(`✅ ${saved} noticias guardadas en Firestore`);
     return saved;
 }
 
 // ============================================
-// MAIN
+// MAIN FUNCTION
 // ============================================
 
 async function main() {
-    console.log('🚀 Iniciando actualización de noticias...');
-    console.log(`📅 Fecha: ${new Date().toISOString()}`);
-    console.log(`📰 Fuentes: ${Object.keys(NEWS_SOURCES).length}`);
+    console.log('\n🚀 Iniciando RSS News Fetcher con Claude API...\n');
     
     const db = initializeFirebase();
+    
+    // Verificar presupuesto mensual
+    const { totalCost: monthlyBudget } = await checkMonthlyBudget(db);
     
     const allArticles = [];
     let successfulSources = 0;
     let failedSources = 0;
     
+    console.log('\n📡 Descargando noticias de fuentes RSS...\n');
+    
     for (const [key, source] of Object.entries(NEWS_SOURCES)) {
         try {
-            console.log(`\n📡 Descargando: ${source.name}...`);
+            console.log(`📥 ${source.name}...`);
             
             const xmlData = await fetchRSS(source.rss);
             const articles = parseRSS(xmlData, source.name);
@@ -631,7 +842,6 @@ async function main() {
             if (articles.length > 0) {
                 console.log(`   ✅ ${articles.length} artículos encontrados`);
                 
-                // Enriquecer con metadata, resúmenes y traducciones
                 const enrichedArticles = [];
                 for (const article of articles) {
                     const enriched = {
@@ -642,19 +852,18 @@ async function main() {
                         metadata: enrichMetadata(article)
                     };
                     
-                    // Generar resumen en inglés (sin traducir)
-                    if (article.description) {
-                        const summary = await generateSummary(article.description);
-                        if (summary) {
-                            enriched.summary = summary;
-                            console.log(`   📝 Resumen generado: ${summary.substring(0, 50)}...`);
-                        }
-                    }
+                    // Procesar con Claude API
+                    const aiResult = await processArticleWithClaude(enriched, monthlyBudget + actualCost);
+                    
+                    enriched.summary = aiResult.summary;
+                    enriched.titleEs = aiResult.titleEs;
+                    enriched.summaryEs = aiResult.summaryEs;
                     
                     enrichedArticles.push(enriched);
+                    articlesProcessed++;
                     
                     // Delay para evitar rate limiting
-                    await new Promise(resolve => setTimeout(resolve, 500));
+                    await new Promise(resolve => setTimeout(resolve, 200));
                 }
                 
                 allArticles.push(...enrichedArticles);
@@ -664,30 +873,42 @@ async function main() {
                 failedSources++;
             }
             
-            // Delay entre requests
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            
         } catch (error) {
             console.error(`   ❌ Error: ${error.message}`);
             failedSources++;
         }
     }
     
-    console.log('\n📊 Resumen:');
-    console.log(`   ✅ Fuentes exitosas: ${successfulSources}`);
-    console.log(`   ❌ Fuentes fallidas: ${failedSources}`);
-    console.log(`   📄 Total artículos: ${allArticles.length}`);
-    
+    // Guardar en Firebase
     if (allArticles.length > 0) {
         await saveToFirestore(db, allArticles);
-        console.log('\n✅ Actualización completada exitosamente');
-    } else {
-        console.log('\n⚠️ No se encontraron noticias para guardar');
     }
+    
+    // Registrar uso de API
+    await logAPIUsage(db);
+    
+    // Resumen final
+    console.log('\n' + '='.repeat(60));
+    console.log('📊 RESUMEN DE EJECUCIÓN');
+    console.log('='.repeat(60));
+    console.log(`✅ Fuentes exitosas: ${successfulSources}`);
+    console.log(`❌ Fuentes fallidas: ${failedSources}`);
+    console.log(`📰 Artículos procesados: ${articlesProcessed}`);
+    console.log(`🤖 Llamadas API: ${apiCallCount}`);
+    console.log(`⚠️ Errores API: ${apiErrors}`);
+    console.log(`🔄 Fallback usado: ${fallbackUsed} veces`);
+    console.log('\n💰 COSTOS:');
+    console.log(`   Input tokens: ${actualInputTokens.toLocaleString()}`);
+    console.log(`   Output tokens: ${actualOutputTokens.toLocaleString()}`);
+    console.log(`   Costo estimado: $${estimatedCost.toFixed(6)}`);
+    console.log(`   Costo real: $${actualCost.toFixed(6)}`);
+    console.log('='.repeat(60) + '\n');
+    
+    console.log('✅ Proceso completado exitosamente\n');
 }
 
 // Ejecutar
 main().catch(error => {
-    console.error('❌ Error fatal:', error);
+    console.error('\n❌ Error fatal:', error);
     process.exit(1);
 });

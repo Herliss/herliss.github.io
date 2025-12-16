@@ -1,50 +1,71 @@
-name: Update Cybersecurity News
+name: Update Cybersecurity News with Claude API
 
 on:
-  # Ejecutar cada hora
   schedule:
-    - cron: '0 * * * *'  # Cada hora en punto
-  
-  # Permitir ejecución manual desde GitHub
-  workflow_dispatch:
-  
-  # Ejecutar en push a main (para testing)
-  push:
-    branches:
-      - main
-    paths:
-      - 'scripts/fetch-rss-news.js'
-      - '.github/workflows/update-news.yml'
+    # Ejecutar cada 6 horas (4 veces al día)
+    # Reducido de cada hora para ahorrar costos
+    - cron: '0 */6 * * *'
+  workflow_dispatch:  # Permite ejecución manual
 
 jobs:
-  update-news:
+  fetch-news:
     runs-on: ubuntu-latest
+    timeout-minutes: 30  # ⚠️ TIMEOUT MÁXIMO: 30 minutos
     
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
-      
+        uses: actions/checkout@v3
+        
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v3
         with:
-          node-version: '20'
-      
+          node-version: '18'
+          cache: 'npm'
+          
       - name: Install dependencies
         run: |
           cd scripts
-          npm install
-      
-      - name: Fetch and update news
+          npm ci
+        
+      - name: Fetch and process news
+        timeout-minutes: 25  # ⚠️ TIMEOUT POR PASO: 25 minutos
         env:
           FIREBASE_CONFIG: ${{ secrets.FIREBASE_CONFIG }}
-          HUGGINGFACE_TOKEN: ${{ secrets.HUGGINGFACE_TOKEN }}
+          CLAUDE_API_KEY: ${{ secrets.CLAUDE_API_KEY }}
         run: |
           cd scripts
           node fetch-rss-news.js
+        
+      - name: Send alert on failure
+        if: failure()
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          username: ${{ secrets.EMAIL_USERNAME }}
+          password: ${{ secrets.EMAIL_PASSWORD }}
+          subject: "⚠️ ALERTA: Error en News Fetcher"
+          to: herliss.briceno@gmail.com
+          from: noreply@herliss.dev
+          body: |
+            ❌ El workflow de actualización de noticias ha fallado.
+            
+            Posibles causas:
+            - Límite de API alcanzado
+            - Error de conexión a Firebase
+            - Timeout de ejecución
+            
+            Revisa los logs en:
+            https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+            
+            Dashboard de costos:
+            https://herliss.github.io/dashboard-api-usage.html
       
-      - name: Report status
+      - name: Upload logs artifact
         if: always()
-        run: |
-          echo "News update completed at $(date)"
-          echo "Check Firestore for updated news"
-          
+        uses: actions/upload-artifact@v3
+        with:
+          name: execution-logs
+          path: |
+            scripts/*.log
+          retention-days: 7
