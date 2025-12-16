@@ -122,7 +122,8 @@ const NEWS_SOURCES = {
 
 const MAX_ARTICLES_PER_SOURCE = 25;
 const REQUEST_TIMEOUT = 30000; // 30 segundos
-const HUGGINGFACE_API = 'https://api-inference.huggingface.co/models/facebook/bart-large-cnn';
+const HUGGINGFACE_API_SUMMARY = 'https://api-inference.huggingface.co/models/facebook/bart-large-cnn';
+const HUGGINGFACE_API_TRANSLATE = 'https://api-inference.huggingface.co/models/Helsinki-NLP/opus-mt-en-es';
 const SUMMARY_MAX_LENGTH = 130;
 const SUMMARY_MIN_LENGTH = 30;
 
@@ -191,7 +192,7 @@ function fetchRSS(url) {
 // ============================================
 
 // ============================================
-// TRANSLATE TO SPANISH WITH LIBRETRANSLATE
+// TRANSLATE TO SPANISH WITH HUGGING FACE
 // ============================================
 
 async function translateToSpanish(text) {
@@ -199,24 +200,30 @@ async function translateToSpanish(text) {
         return null;
     }
     
+    const token = process.env.HUGGINGFACE_TOKEN;
+    if (!token) {
+        console.warn('⚠️ HUGGINGFACE_TOKEN no configurado, omitiendo traducciones');
+        return null;
+    }
+    
     try {
         const response = await new Promise((resolve, reject) => {
+            const url = new URL(HUGGINGFACE_API_TRANSLATE);
             const postData = JSON.stringify({
-                q: text.slice(0, 5000), // Limitar input
-                source: 'en',
-                target: 'es',
-                format: 'text'
+                inputs: text.slice(0, 1024), // Limitar input
+                options: { wait_for_model: true }
             });
             
             const options = {
-                hostname: 'libretranslate.com',
-                path: '/translate',
+                hostname: url.hostname,
+                path: url.pathname,
                 method: 'POST',
                 headers: {
+                    'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json',
                     'Content-Length': Buffer.byteLength(postData)
                 },
-                timeout: 10000
+                timeout: 15000
             };
             
             const req = https.request(options, (res) => {
@@ -226,7 +233,7 @@ async function translateToSpanish(text) {
                     if (res.statusCode === 200) {
                         resolve(JSON.parse(data));
                     } else {
-                        reject(new Error(`HTTP ${res.statusCode}`));
+                        reject(new Error(`HTTP ${res.statusCode}: ${data}`));
                     }
                 });
             });
@@ -241,7 +248,11 @@ async function translateToSpanish(text) {
             req.end();
         });
         
-        return response.translatedText || null;
+        if (Array.isArray(response) && response[0]?.translation_text) {
+            return response[0].translation_text;
+        }
+        
+        return null;
     } catch (error) {
         console.error(`   ⚠️ Error traduciendo: ${error.message}`);
         return null;
@@ -265,14 +276,15 @@ async function generateSummary(text) {
     
     try {
         const response = await new Promise((resolve, reject) => {
-            const url = new URL(HUGGINGFACE_API);
+            const url = new URL(HUGGINGFACE_API_SUMMARY);
             const postData = JSON.stringify({
                 inputs: text.slice(0, 1024), // Limitar input
                 parameters: {
                     max_length: SUMMARY_MAX_LENGTH,
                     min_length: SUMMARY_MIN_LENGTH,
                     do_sample: false
-                }
+                },
+                options: { wait_for_model: true }
             });
             
             const options = {
@@ -575,8 +587,8 @@ async function main() {
                     
                     enrichedArticles.push(enriched);
                     
-                    // Delay para evitar rate limiting
-                    await new Promise(resolve => setTimeout(resolve, 200));
+                    // Delay para evitar rate limiting (aumentado a 500ms)
+                    await new Promise(resolve => setTimeout(resolve, 500));
                 }
                 
                 allArticles.push(...enrichedArticles);
