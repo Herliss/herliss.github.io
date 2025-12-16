@@ -19,13 +19,11 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
-          cache-dependency-path: 'scripts/package-lock.json'
           
       - name: Install dependencies
         run: |
           cd scripts
-          npm ci
+          npm install
         
       - name: Fetch and process news
         timeout-minutes: 25  # ⚠️ TIMEOUT POR PASO: 25 minutos
