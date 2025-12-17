@@ -825,7 +825,9 @@ async function saveToFirestore(db, articles) {
                 console.log(`      newsData.summaryEs: ${newsData.summaryEs ? `"${newsData.summaryEs.substring(0, 80)}..."` : 'CADENA VACÍA'}`);
             }
             
-            batch.set(newsRef, newsData, { merge: true });
+            // SOLUCIÓN CRÍTICA: Usar set sin merge para sobrescribir completamente los documentos
+            // Esto garantiza que los campos vacíos de documentos antiguos se reemplacen con los nuevos valores válidos
+            batch.set(newsRef, newsData);
             saved++;
             
             if (saved % 500 === 0) {
