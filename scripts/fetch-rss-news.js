@@ -787,6 +787,14 @@ async function saveToFirestore(db, articles) {
             
             const pubDate = new Date(article.pubDate);
             
+            // DEBUG: Log de los primeros 3 artículos
+            if (saved < 3) {
+                console.log(`\n   🔍 DEBUG Guardando artículo ${saved + 1}:`);
+                console.log(`      article.summary: ${article.summary ? `"${article.summary.substring(0, 80)}..."` : 'UNDEFINED/NULL'}`);
+                console.log(`      article.titleEs: ${article.titleEs ? `"${article.titleEs}"` : 'UNDEFINED/NULL'}`);
+                console.log(`      article.summaryEs: ${article.summaryEs ? `"${article.summaryEs.substring(0, 80)}..."` : 'UNDEFINED/NULL'}`);
+            }
+            
             const newsData = {
                 id: newsId,
                 title: article.title,
@@ -809,6 +817,13 @@ async function saveToFirestore(db, articles) {
                 savedAt: Timestamp.now(),
                 updatedAt: Timestamp.now()
             };
+            
+            // DEBUG: Log del objeto que se va a guardar
+            if (saved < 3) {
+                console.log(`      newsData.summary: ${newsData.summary ? `"${newsData.summary.substring(0, 80)}..."` : 'CADENA VACÍA'}`);
+                console.log(`      newsData.titleEs: ${newsData.titleEs ? `"${newsData.titleEs}"` : 'CADENA VACÍA'}`);
+                console.log(`      newsData.summaryEs: ${newsData.summaryEs ? `"${newsData.summaryEs.substring(0, 80)}..."` : 'CADENA VACÍA'}`);
+            }
             
             batch.set(newsRef, newsData, { merge: true });
             saved++;
@@ -897,6 +912,19 @@ async function main() {
     
     // Guardar en Firebase
     if (allArticles.length > 0) {
+        console.log(`\n🔍 DEBUG: Verificando contenido antes de guardar en Firebase...`);
+        console.log(`   Total artículos: ${allArticles.length}`);
+        
+        // Verificar los primeros 3 artículos
+        for (let i = 0; i < Math.min(3, allArticles.length); i++) {
+            const art = allArticles[i];
+            console.log(`\n   Artículo ${i + 1}:`);
+            console.log(`      title: ${art.title ? art.title.substring(0, 50) : 'VACÍO'}`);
+            console.log(`      summary: ${art.summary ? `${art.summary.length} chars` : 'VACÍO/UNDEFINED'}`);
+            console.log(`      titleEs: ${art.titleEs ? `${art.titleEs.length} chars` : 'VACÍO/UNDEFINED'}`);
+            console.log(`      summaryEs: ${art.summaryEs ? `${art.summaryEs.length} chars` : 'VACÍO/UNDEFINED'}`);
+        }
+        
         await saveToFirestore(db, allArticles);
     }
     
