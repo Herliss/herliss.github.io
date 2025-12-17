@@ -406,18 +406,34 @@ function parseClaudeResponse(content, level) {
     try {
         const text = content[0].text;
         
-        // Limpiar markdown si existe
-        const cleanText = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+        // LOGGING DETALLADO PARA DEBUGGING
+        console.log(`   📝 Respuesta cruda de Claude (primeros 200 chars): ${text.substring(0, 200)}`);
+        
+        // Limpiar markdown y otros formatos
+        let cleanText = text
+            .replace(/```json\n?/g, '')
+            .replace(/```\n?/g, '')
+            .replace(/^[\s\n]*\{/g, '{')  // Eliminar espacios antes del {
+            .replace(/\}[\s\n]*$/g, '}')  // Eliminar espacios después del }
+            .trim();
+        
+        console.log(`   🧹 Texto limpio (primeros 200 chars): ${cleanText.substring(0, 200)}`);
         
         const parsed = JSON.parse(cleanText);
         
-        return {
+        const result = {
             summary: parsed.summary || '',
             titleEs: parsed.titleEs || '',
             summaryEs: parsed.summaryEs || ''
         };
+        
+        console.log(`   ✅ Parsing exitoso - summary: ${result.summary.length} chars, titleEs: ${result.titleEs.length} chars, summaryEs: ${result.summaryEs.length} chars`);
+        
+        return result;
     } catch (error) {
-        console.error(`   ⚠️ Error parseando respuesta: ${error.message}`);
+        console.error(`   ❌ Error parseando respuesta: ${error.message}`);
+        console.error(`   ❌ Stack trace: ${error.stack}`);
+        console.error(`   ❌ Contenido problemático: ${JSON.stringify(content).substring(0, 300)}`);
         return { summary: '', titleEs: '', summaryEs: '' };
     }
 }
