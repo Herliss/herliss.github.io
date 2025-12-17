@@ -22,6 +22,16 @@ const { getFirestore, Timestamp, FieldValue } = require('firebase-admin/firestor
 // CONFIGURACIÓN DE SEGURIDAD
 // ============================================
 
+// Detectar si estamos en CI (GitHub Actions)
+const IS_CI = process.env.GITHUB_ACTIONS === 'true';
+
+// Función de logging condicional
+function debugLog(...args) {
+    if (!IS_CI) {
+        console.log(...args);
+    }
+}
+
 const SAFETY_CONFIG = {
     // Límites de presupuesto
     MONTHLY_BUDGET_LIMIT: 4.00,         // $4 USD/mes máximo
@@ -31,6 +41,7 @@ const SAFETY_CONFIG = {
     // Límites por ejecución
     MAX_CALLS_PER_RUN: 50,              // Máximo 50 llamadas API por workflow
     MAX_CALLS_PER_ARTICLE: 1,           // 1 llamada batch por artículo
+    MAX_ARTICLES_PER_RUN: 100,          // 🔥 NUEVO: Límite global de artículos a procesar
     
     // Timeouts
     API_TIMEOUT: 30000,                 // 30 segundos por llamada
@@ -406,9 +417,6 @@ function parseClaudeResponse(content, level) {
     try {
         const text = content[0].text;
         
-        // LOGGING DETALLADO PARA DEBUGGING
-        console.log(`   📝 Respuesta cruda de Claude (primeros 200 chars): ${text.substring(0, 200)}`);
-        
         // Limpiar markdown y otros formatos
         let cleanText = text
             .replace(/```json\n?/g, '')
@@ -416,8 +424,6 @@ function parseClaudeResponse(content, level) {
             .replace(/^[\s\n]*\{/g, '{')  // Eliminar espacios antes del {
             .replace(/\}[\s\n]*$/g, '}')  // Eliminar espacios después del }
             .trim();
-        
-        console.log(`   🧹 Texto limpio (primeros 200 chars): ${cleanText.substring(0, 200)}`);
         
         const parsed = JSON.parse(cleanText);
         
@@ -427,13 +433,12 @@ function parseClaudeResponse(content, level) {
             summaryEs: parsed.summaryEs || ''
         };
         
-        console.log(`   ✅ Parsing exitoso - summary: ${result.summary.length} chars, titleEs: ${result.titleEs.length} chars, summaryEs: ${result.summaryEs.length} chars`);
+        // Log simplificado solo en local (no en CI)
+        debugLog(`   ✅ Parsing exitoso - summary: ${result.summary.length} chars, titleEs: ${result.titleEs.length} chars, summaryEs: ${result.summaryEs.length} chars`);
         
         return result;
     } catch (error) {
         console.error(`   ❌ Error parseando respuesta: ${error.message}`);
-        console.error(`   ❌ Stack trace: ${error.stack}`);
-        console.error(`   ❌ Contenido problemático: ${JSON.stringify(content).substring(0, 300)}`);
         return { summary: '', titleEs: '', summaryEs: '' };
     }
 }
@@ -773,27 +778,22 @@ function parseRSS(xmlData, sourceName) {
 async function saveToFirestore(db, articles) {
     console.log(`\n💾 Guardando ${articles.length} noticias en Firestore...`);
     
-    const batch = db.batch();
+    let batch = db.batch();  // 👈 Cambio importante: usar let en lugar de const
     let saved = 0;
     
     for (const article of articles) {
         try {
-            const newsId = `news_${Buffer.from(article.link)
-                .toString('base64')
-                .replace(/[^a-zA-Z0-9]/g, '')
-                .substring(0, 6)}`;
+            // Generar ID más robusto con SHA256
+            const crypto = require('crypto');
+            const newsId = crypto
+                .createHash('sha256')
+                .update(article.link)
+                .digest('hex')
+                .substring(0, 16);  // 16 caracteres = 64 bits de entropía (prácticamente sin colisiones)
             
             const newsRef = db.collection('news').doc(newsId);
             
             const pubDate = new Date(article.pubDate);
-            
-            // DEBUG: Log de los primeros 3 artículos
-            if (saved < 3) {
-                console.log(`\n   🔍 DEBUG Guardando artículo ${saved + 1}:`);
-                console.log(`      article.summary: ${article.summary ? `"${article.summary.substring(0, 80)}..."` : 'UNDEFINED/NULL'}`);
-                console.log(`      article.titleEs: ${article.titleEs ? `"${article.titleEs}"` : 'UNDEFINED/NULL'}`);
-                console.log(`      article.summaryEs: ${article.summaryEs ? `"${article.summaryEs.substring(0, 80)}..."` : 'UNDEFINED/NULL'}`);
-            }
             
             const newsData = {
                 id: newsId,
@@ -818,20 +818,13 @@ async function saveToFirestore(db, articles) {
                 updatedAt: Timestamp.now()
             };
             
-            // DEBUG: Log del objeto que se va a guardar
-            if (saved < 3) {
-                console.log(`      newsData.summary: ${newsData.summary ? `"${newsData.summary.substring(0, 80)}..."` : 'CADENA VACÍA'}`);
-                console.log(`      newsData.titleEs: ${newsData.titleEs ? `"${newsData.titleEs}"` : 'CADENA VACÍA'}`);
-                console.log(`      newsData.summaryEs: ${newsData.summaryEs ? `"${newsData.summaryEs.substring(0, 80)}..."` : 'CADENA VACÍA'}`);
-            }
-            
             // SOLUCIÓN CRÍTICA: Usar set sin merge para sobrescribir completamente los documentos
-            // Esto garantiza que los campos vacíos de documentos antiguos se reemplacen con los nuevos valores válidos
             batch.set(newsRef, newsData);
             saved++;
             
             if (saved % 500 === 0) {
                 await batch.commit();
+                batch = db.batch();  // 🔥 CRÍTICO: Reiniciar el batch después del commit
                 console.log(`✅ Batch guardado: ${saved} noticias`);
             }
         } catch (error) {
@@ -839,6 +832,7 @@ async function saveToFirestore(db, articles) {
         }
     }
     
+    // Commit final si quedan documentos pendientes
     if (saved % 500 !== 0) {
         await batch.commit();
     }
@@ -866,6 +860,13 @@ async function main() {
     console.log('\n📡 Descargando noticias de fuentes RSS...\n');
     
     for (const [key, source] of Object.entries(NEWS_SOURCES)) {
+        // Verificar límite global de artículos
+        if (articlesProcessed >= SAFETY_CONFIG.MAX_ARTICLES_PER_RUN) {
+            console.log(`\n⚠️ LÍMITE GLOBAL ALCANZADO: ${articlesProcessed} artículos procesados`);
+            console.log(`   Deteniendo procesamiento para controlar costos y tiempo de ejecución`);
+            break;
+        }
+        
         try {
             console.log(`📥 ${source.name}...`);
             
@@ -877,6 +878,11 @@ async function main() {
                 
                 const enrichedArticles = [];
                 for (const article of articles) {
+                    // Verificar límite global antes de procesar cada artículo
+                    if (articlesProcessed >= SAFETY_CONFIG.MAX_ARTICLES_PER_RUN) {
+                        break;
+                    }
+                    
                     const enriched = {
                         ...article,
                         sourceName: source.name,
@@ -912,21 +918,8 @@ async function main() {
         }
     }
     
-    // Guardar en Firebase
+    // Guardar en Firebase (sin logs de debugging innecesarios)
     if (allArticles.length > 0) {
-        console.log(`\n🔍 DEBUG: Verificando contenido antes de guardar en Firebase...`);
-        console.log(`   Total artículos: ${allArticles.length}`);
-        
-        // Verificar los primeros 3 artículos
-        for (let i = 0; i < Math.min(3, allArticles.length); i++) {
-            const art = allArticles[i];
-            console.log(`\n   Artículo ${i + 1}:`);
-            console.log(`      title: ${art.title ? art.title.substring(0, 50) : 'VACÍO'}`);
-            console.log(`      summary: ${art.summary ? `${art.summary.length} chars` : 'VACÍO/UNDEFINED'}`);
-            console.log(`      titleEs: ${art.titleEs ? `${art.titleEs.length} chars` : 'VACÍO/UNDEFINED'}`);
-            console.log(`      summaryEs: ${art.summaryEs ? `${art.summaryEs.length} chars` : 'VACÍO/UNDEFINED'}`);
-        }
-        
         await saveToFirestore(db, allArticles);
     }
     
