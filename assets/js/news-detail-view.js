@@ -1,6 +1,9 @@
 /**
  * News Detail View - Mostrar detalle de noticia en panel principal
- * Al hacer clic en sidebar "Entradas Mensuales"
+ * VERSIÓN 2.0 - Búsqueda por LINK en lugar de ID
+ * 
+ * SOLUCIÓN: Busca la noticia directamente por su link original
+ * en lugar de depender de IDs generados
  * 
  * Autor: Herliss Briceño
  * Fecha: Diciembre 2024
@@ -18,11 +21,11 @@ let currentDetailView = null;
 // ============================================
 
 /**
- * Muestra el detalle de una noticia en el panel principal
- * @param {string} newsId - ID del documento en Firebase
+ * Muestra el detalle de una noticia buscando por su link
+ * @param {string} newsLink - URL original de la noticia
  */
-async function showNewsDetail(newsId) {
-    console.log(`📰 Mostrando detalle de noticia: ${newsId}`);
+async function showNewsDetail(newsLink) {
+    console.log(`📰 Buscando noticia por link: ${newsLink}`);
     
     // Verificar Firebase
     if (!window.db) {
@@ -35,15 +38,29 @@ async function showNewsDetail(newsId) {
         // Mostrar loading
         showDetailLoading();
         
-        // Obtener documento de Firebase
-        const doc = await window.db.collection('news').doc(newsId).get();
+        // NUEVA ESTRATEGIA: Buscar por link en lugar de por ID
+        const snapshot = await window.db.collection('news')
+            .where('link', '==', newsLink)
+            .limit(1)
+            .get();
         
-        if (!doc.exists) {
-            console.warn('⚠️ Noticia no encontrada:', newsId);
+        if (snapshot.empty) {
+            console.warn('⚠️ Noticia no encontrada por link:', newsLink);
+            
+            // FALLBACK: Buscar en el array en memoria
+            const newsData = findInMemory(newsLink);
+            if (newsData) {
+                console.log('✅ Noticia encontrada en memoria');
+                renderNewsDetail(newsData);
+                scrollToDetailView();
+                return;
+            }
+            
             showError('Noticia no encontrada');
             return;
         }
         
+        const doc = snapshot.docs[0];
         const newsData = doc.data();
         
         // Renderizar detalle
@@ -56,8 +73,50 @@ async function showNewsDetail(newsId) {
         
     } catch (error) {
         console.error('❌ Error obteniendo noticia:', error);
+        
+        // FALLBACK: Buscar en memoria
+        const newsData = findInMemory(newsLink);
+        if (newsData) {
+            console.log('✅ Usando datos en memoria como fallback');
+            renderNewsDetail(newsData);
+            scrollToDetailView();
+            return;
+        }
+        
         showError('Error al cargar la noticia');
     }
+}
+
+// ============================================
+// BÚSQUEDA EN MEMORIA (FALLBACK)
+// ============================================
+
+/**
+ * Busca la noticia en los datos en memoria
+ */
+function findInMemory(newsLink) {
+    // Buscar en unfilteredNewsData
+    if (window.unfilteredNewsData && Array.isArray(window.unfilteredNewsData)) {
+        const found = window.unfilteredNewsData.find(article => article.link === newsLink);
+        if (found) return found;
+    }
+    
+    // Buscar en newsData
+    if (window.newsData && Array.isArray(window.newsData)) {
+        const found = window.newsData.find(article => article.link === newsLink);
+        if (found) return found;
+    }
+    
+    // Buscar en DateArchiveWidget
+    if (window.DateArchiveWidget && window.DateArchiveWidget.getCurrentFiltered) {
+        const filtered = window.DateArchiveWidget.getCurrentFiltered();
+        if (filtered && Array.isArray(filtered)) {
+            const found = filtered.find(article => article.link === newsLink);
+            if (found) return found;
+        }
+    }
+    
+    return null;
 }
 
 // ============================================
@@ -74,12 +133,25 @@ function renderNewsDetail(newsData) {
         return;
     }
     
-    // Extraer datos
+    // Extraer datos con fallbacks
     const titleEs = newsData.titleEs || newsData.title || 'Sin título';
     const summaryEs = newsData.summaryEs || newsData.summary || newsData.description || 'Sin resumen disponible';
     const link = newsData.link || '#';
     const sourceName = newsData.sourceName || 'Fuente desconocida';
-    const pubDate = newsData.pubDate ? newsData.pubDate.toDate() : new Date();
+    
+    // Manejar fecha
+    let pubDate;
+    if (newsData.pubDate) {
+        if (newsData.pubDate.toDate) {
+            pubDate = newsData.pubDate.toDate(); // Firestore Timestamp
+        } else if (typeof newsData.pubDate === 'string') {
+            pubDate = new Date(newsData.pubDate); // ISO string
+        } else {
+            pubDate = new Date(newsData.pubDate); // Intentar convertir
+        }
+    } else {
+        pubDate = new Date();
+    }
     
     // Formatear fecha
     const formattedDate = pubDate.toLocaleDateString('es-ES', {
@@ -135,11 +207,20 @@ function renderNewsDetail(newsData) {
  * Formatea el resumen en párrafos
  */
 function formatSummary(summary) {
-    // Separar por saltos de línea dobles o puntos seguidos
-    const paragraphs = summary.split(/\n\n+|\. (?=[A-ZÁ-Ú])/);
+    if (!summary) return '<p>Sin resumen disponible</p>';
+    
+    // Separar por saltos de línea dobles o puntos seguidos de mayúscula
+    const paragraphs = summary.split(/\n\n+|\. (?=[A-ZÁÉÍÓÚÑ])/);
     
     return paragraphs
-        .map(p => `<p>${p.trim()}${p.endsWith('.') ? '' : '.'}</p>`)
+        .filter(p => p.trim().length > 0)
+        .map(p => {
+            const trimmed = p.trim();
+            const withPeriod = trimmed.endsWith('.') || trimmed.endsWith('!') || trimmed.endsWith('?') 
+                ? trimmed 
+                : trimmed + '.';
+            return `<p>${withPeriod}</p>`;
+        })
         .join('');
 }
 
@@ -169,6 +250,7 @@ function showError(message) {
     container.innerHTML = `
         <div class="detail-error">
             <h3>⚠️ ${message}</h3>
+            <p>La noticia podría haber sido eliminada o no estar disponible en la base de datos.</p>
             <button onclick="window.NewsDetailView.close()" class="btn-secondary">
                 Volver a noticias
             </button>
@@ -253,13 +335,13 @@ function attachDetailListeners() {
     const newsLinks = document.querySelectorAll('.month-news-list a');
     
     newsLinks.forEach(link => {
-        // Extraer ID del documento del atributo data
-        const newsId = link.getAttribute('data-news-id');
+        // Extraer el link original del atributo data
+        const newsLink = link.getAttribute('data-news-link');
         
-        if (newsId) {
+        if (newsLink) {
             link.addEventListener('click', function(e) {
                 e.preventDefault();
-                showNewsDetail(newsId);
+                showNewsDetail(newsLink);
             });
         }
     });
@@ -282,7 +364,7 @@ document.addEventListener('dateArchiveRendered', function() {
 // ============================================
 
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('✅ News Detail View cargado');
+    console.log('✅ News Detail View v2.0 cargado (búsqueda por link)');
     
     // Crear contenedor si no existe
     const newsContainer = document.getElementById('news-container');
@@ -308,4 +390,4 @@ window.NewsDetailView = {
     current: () => currentDetailView
 };
 
-console.log('📰 News Detail View API expuesta globalmente');
+console.log('📰 News Detail View API v2.0 expuesta globalmente');

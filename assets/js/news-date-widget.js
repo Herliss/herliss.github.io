@@ -1,10 +1,8 @@
 /**
- * Date Archive Widget - VERSIÓN 4.3 CON SOPORTE PARA DETALLE
+ * Date Archive Widget - VERSIÓN 4.4 CORREGIDA
  * 
- * NUEVO: Integración con News Detail View
- * - Agrega data-news-id a cada noticia
- * - Permite mostrar detalle al hacer clic
- * - Usa titleEs si está disponible en español
+ * SOLUCIÓN: Usa data-news-link en lugar de data-news-id
+ * Pasa el link original para búsqueda directa
  * 
  * Autor: Herliss Briceño
  * Fecha: Diciembre 2024
@@ -23,26 +21,6 @@ const MONTH_NAMES = [
 // Estado del widget
 let lastRenderedCount = 0;
 let currentFilteredNews = null;
-
-// ============================================
-// UTILIDAD: GENERAR ID DE NOTICIA
-// ============================================
-
-/**
- * Genera un ID único basado en la URL (mismo sistema que news-database.js)
- */
-function generateNewsId(url) {
-    let hash = 0;
-    const cleanUrl = url.toLowerCase().trim();
-    
-    for (let i = 0; i < cleanUrl.length; i++) {
-        const char = cleanUrl.charCodeAt(i);
-        hash = ((hash << 5) - hash) + char;
-        hash = hash & hash;
-    }
-    
-    return 'news_' + Math.abs(hash).toString(36);
-}
 
 // ============================================
 // GENERAR ESTRUCTURA DE ARCHIVO POR FECHA
@@ -99,7 +77,7 @@ function renderDateArchiveWidget(articles) {
         return;
     }
     
-    console.log(`📅 Date Widget v4.3: Renderizando ${articles ? articles.length : 0} noticias`);
+    console.log(`📅 Date Widget v4.4: Renderizando ${articles ? articles.length : 0} noticias`);
     
     // Guardar las noticias que estamos renderizando
     currentFilteredNews = articles;
@@ -188,7 +166,7 @@ function renderDateArchiveWidget(articles) {
                     </button>
             `;
             
-            // LISTA DE NOTICIAS - MODIFICADO CON CLASS Y DATA-NEWS-ID
+            // LISTA DE NOTICIAS - MODIFICADO: USA data-news-link
             html += `<div id="${monthId}" class="month-news-list" style="display: ${isMonthOpen ? 'block' : 'none'}; padding: 0.5rem 0 0.5rem 1rem; max-height: 400px; overflow-y: auto;">`;
             html += '<ul style="list-style: none; padding: 0; margin: 0;">';
             
@@ -198,9 +176,6 @@ function renderDateArchiveWidget(articles) {
                 .forEach(article => {
                     const articleDate = new Date(article.pubDate);
                     const formattedDate = `${articleDate.getDate()}/${articleDate.getMonth() + 1}`;
-                    
-                    // Generar ID único para este artículo
-                    const newsId = generateNewsId(article.link);
                     
                     // Usar titleEs si existe, sino usar title original
                     const displayTitleSource = article.titleEs || article.title;
@@ -212,11 +187,11 @@ function renderDateArchiveWidget(articles) {
                         displayTitle = displayTitle.substring(0, maxLength) + '...';
                     }
                     
-                    // MODIFICADO: href="#" + data-news-id + class
+                    // CRÍTICO: Usar data-news-link en lugar de data-news-id
                     html += `
                         <li style="margin-bottom: 0.5rem;">
                             <a href="#" 
-                               data-news-id="${newsId}"
+                               data-news-link="${article.link}"
                                class="news-detail-link"
                                style="display: flex; gap: 0.5rem; padding: 0.625rem; background: #f8f9fa; border-radius: 6px; text-decoration: none; color: #2c3e50; font-size: 0.8rem; line-height: 1.4; transition: all 0.3s ease; border-left: 2px solid transparent;"
                                onmouseover="this.style.background='#e9ecef'; this.style.borderLeftColor='#3498db'; this.style.paddingLeft='0.875rem'"
@@ -273,13 +248,13 @@ function attachNewsDetailListeners() {
         link.addEventListener('click', function(e) {
             e.preventDefault();
             
-            const newsId = this.getAttribute('data-news-id');
+            const newsLink = this.getAttribute('data-news-link');
             
-            if (newsId && window.NewsDetailView && window.NewsDetailView.show) {
-                console.log(`🔗 Click en noticia: ${newsId}`);
-                window.NewsDetailView.show(newsId);
+            if (newsLink && window.NewsDetailView && window.NewsDetailView.show) {
+                console.log(`🔗 Click en noticia: ${newsLink.substring(0, 50)}...`);
+                window.NewsDetailView.show(newsLink);
             } else {
-                console.warn('⚠️ NewsDetailView no disponible');
+                console.warn('⚠️ NewsDetailView no disponible o link vacío');
             }
         });
     });
@@ -417,7 +392,7 @@ document.addEventListener('advancedFiltersApplied', function(event) {
 });
 
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('📅 Date Widget v4.3 CON DETALLE cargado');
+    console.log('📅 Date Widget v4.4 CORREGIDO - Búsqueda por link');
     
     if (!tryInitialize()) {
         setTimeout(tryInitialize, 500);
@@ -461,7 +436,6 @@ window.renderDateArchiveWidget = renderDateArchiveWidget;
 window.updateDateWidget = updateDateWidget;
 window.toggleYear = toggleYear;
 window.toggleMonth = toggleMonth;
-window.generateNewsId = generateNewsId;
 
 // Estilos adicionales
 const style = document.createElement('style');
@@ -492,4 +466,4 @@ window.DateArchiveWidget = {
     getCurrentFiltered: () => currentFilteredNews
 };
 
-console.log('✅ Date Archive Widget v4.3 - CON SOPORTE PARA VISTA DETALLE');
+console.log('✅ Date Archive Widget v4.4 - BÚSQUEDA CORREGIDA POR LINK');
