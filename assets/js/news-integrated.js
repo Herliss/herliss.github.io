@@ -1,5 +1,52 @@
 /**
  * News Loader OPTIMIZADO v3.0 - CON INTEGRACIÓN FIRESTORE
+ * MODIFICADO: Muestra títulos y resúmenes en ESPAÑOL
+ * 
+ * NUEVAS CARACTERÍSTICAS:
+ * ✅ Integración con Firebase Firestore para caché persistente
+ * ✅ Carga instantánea desde base de datos
+ * ✅ Actualización automática en background
+ * ✅ Fallback a RSS si Firestore no está disponible
+ * ✅ Soporte para múltiples proxies CORS
+ * ✅ TÍTULOS Y RESÚMENES EN ESPAÑOL (titleEs, summaryEs)
+ * 
+ * Autor: Herliss Briceño
+ * Fecha: Diciembre 2024
+ * Versión: 3.1 - ESPAÑOL
+ */
+
+'use strict';
+
+// ============================================
+// CONFIGURACIÓN DE PERFORMANCE - MEJORADA
+// ============================================
+
+const PERFORMANCE_CONFIG = {
+    // Caché LocalStorage
+    CACHE_DURATION: 5 * 60 * 1000, // 5 minutos
+    CACHE_KEY: 'herliss_news_cache',
+    
+    // Carga - VALORES OPTIMIZADOS
+    BATCH_SIZE: 4, // Cargar 4 fuentes en paralelo
+    ARTICLES_PER_SOURCE_FIRST_LOAD: 15,
+    ARTICLES_PER_SOURCE_FULL: 25, 
+    REQUEST_TIMEOUT: 25000, // 25 segundos
+    MAX_RETRIES: 2, // 2 reintentos
+    
+    // NUEVO: Array de proxies CORS con fallback
+    PROXIES: [
+        'https://api.allorigins.win/raw?url=',
+        'https://corsproxy.org/?',
+        'https://api.allorigins.win/get?url=',
+        'https://thingproxy.freeboard.io/fetch/'
+    ],
+    
+    // Firestore
+    FIRESTORE_RECENT_DAYS: 7, // Días a mantener en caché rápido
+    BACKGROUND_UPDATE_DELAY: 3000 // 3 segundos después de cargar desde Firestore
+};
+/**
+ * News Loader OPTIMIZADO v3.0 - CON INTEGRACIÓN FIRESTORE
  * 
  * NUEVAS CARACTERÍSTICAS:
  * ✅ Integración con Firebase Firestore para caché persistente
@@ -896,12 +943,20 @@ function renderNews(articles) {
     newsContainer.appendChild(fragment);
 }
 
+
 function createNewsCard(article) {
     const card = document.createElement('article');
     card.className = 'news-card';
     
-    const description = stripHTML(article.description || '');
-    const truncatedDesc = description.length > 200 ? description.substring(0, 200) + '...' : description;
+    // ✅ MODIFICACIÓN: Usar titleEs y summaryEs (español)
+    const titleEs = article.titleEs || article.title || 'Sin título';
+    const summaryEs = article.summaryEs || article.summary || article.description || '';
+    
+    // Limpiar HTML y truncar a 150 caracteres (2-3 líneas)
+    const cleanSummary = stripHTML(summaryEs);
+    const truncatedDesc = cleanSummary.length > 150 
+        ? cleanSummary.substring(0, 150).trim() + '...' 
+        : cleanSummary;
     
     const pubDate = new Date(article.pubDate);
     const formattedTime = pubDate.toLocaleTimeString('es-ES', {
@@ -967,7 +1022,7 @@ function createNewsCard(article) {
         ${thumbnail ? `
             <div class="news-image">
                 <img src="${sanitizeHTML(thumbnail)}" 
-                     alt="${sanitizeHTML(article.title)}"
+                     alt="${sanitizeHTML(titleEs)}"
                      loading="lazy"
                      onerror="this.style.display='none'">
             </div>
@@ -978,7 +1033,7 @@ function createNewsCard(article) {
                 <a href="${sanitizeHTML(article.link)}" 
                    target="_blank" 
                    rel="noopener noreferrer">
-                    ${sanitizeHTML(article.title)}
+                    ${sanitizeHTML(titleEs)}
                 </a>
             </h3>
             <p>${sanitizeHTML(truncatedDesc)}</p>
