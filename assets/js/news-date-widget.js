@@ -1,11 +1,13 @@
 /**
- * Date Archive Widget - VERSIÓN 4.2 CORREGIDA
+ * Date Archive Widget - VERSIÓN 4.3 CON SOPORTE PARA DETALLE
  * 
- * SOLUCIÓN: Fuerza la visibilidad de TODOS los meses
- * Problema identificado: HTML se generaba pero no se mostraba
+ * NUEVO: Integración con News Detail View
+ * - Agrega data-news-id a cada noticia
+ * - Permite mostrar detalle al hacer clic
+ * - Usa titleEs si está disponible en español
  * 
  * Autor: Herliss Briceño
- * Fecha: Noviembre 2025
+ * Fecha: Diciembre 2024
  */
 
 'use strict';
@@ -21,6 +23,26 @@ const MONTH_NAMES = [
 // Estado del widget
 let lastRenderedCount = 0;
 let currentFilteredNews = null;
+
+// ============================================
+// UTILIDAD: GENERAR ID DE NOTICIA
+// ============================================
+
+/**
+ * Genera un ID único basado en la URL (mismo sistema que news-database.js)
+ */
+function generateNewsId(url) {
+    let hash = 0;
+    const cleanUrl = url.toLowerCase().trim();
+    
+    for (let i = 0; i < cleanUrl.length; i++) {
+        const char = cleanUrl.charCodeAt(i);
+        hash = ((hash << 5) - hash) + char;
+        hash = hash & hash;
+    }
+    
+    return 'news_' + Math.abs(hash).toString(36);
+}
 
 // ============================================
 // GENERAR ESTRUCTURA DE ARCHIVO POR FECHA
@@ -77,7 +99,7 @@ function renderDateArchiveWidget(articles) {
         return;
     }
     
-    console.log(`📅 Date Widget v4.2: Renderizando ${articles ? articles.length : 0} noticias`);
+    console.log(`📅 Date Widget v4.3: Renderizando ${articles ? articles.length : 0} noticias`);
     
     // Guardar las noticias que estamos renderizando
     currentFilteredNews = articles;
@@ -113,7 +135,7 @@ function renderDateArchiveWidget(articles) {
         return;
     }
     
-    // CONSTRUIR HTML - VERSIÓN SIMPLIFICADA SIN CLASES PROBLEMÁTICAS
+    // CONSTRUIR HTML
     let html = '';
     
     years.forEach((year, yearIndex) => {
@@ -139,13 +161,11 @@ function renderDateArchiveWidget(articles) {
                 </button>
         `;
         
-        // CONTENEDOR DE MESES - FORZAR VISIBILIDAD
+        // CONTENEDOR DE MESES
         html += `<div id="${yearId}" style="display: ${isYearOpen ? 'block' : 'none'}; padding-left: 0.5rem; margin-bottom: 0.5rem; border-left: 3px solid #3498db;">`;
         
         // Ordenar meses descendentemente
         const months = Object.keys(yearData.months).sort((a, b) => b - a);
-        
-        console.log(`      Meses: ${months.map(m => MONTH_NAMES[m]).join(', ')}`);
         
         months.forEach((monthIndex, idx) => {
             const monthData = yearData.months[monthIndex];
@@ -168,8 +188,8 @@ function renderDateArchiveWidget(articles) {
                     </button>
             `;
             
-            // LISTA DE NOTICIAS
-            html += `<div id="${monthId}" style="display: ${isMonthOpen ? 'block' : 'none'}; padding: 0.5rem 0 0.5rem 1rem; max-height: 400px; overflow-y: auto;">`;
+            // LISTA DE NOTICIAS - MODIFICADO CON CLASS Y DATA-NEWS-ID
+            html += `<div id="${monthId}" class="month-news-list" style="display: ${isMonthOpen ? 'block' : 'none'}; padding: 0.5rem 0 0.5rem 1rem; max-height: 400px; overflow-y: auto;">`;
             html += '<ul style="list-style: none; padding: 0; margin: 0;">';
             
             // Artículos del mes
@@ -179,22 +199,29 @@ function renderDateArchiveWidget(articles) {
                     const articleDate = new Date(article.pubDate);
                     const formattedDate = `${articleDate.getDate()}/${articleDate.getMonth() + 1}`;
                     
+                    // Generar ID único para este artículo
+                    const newsId = generateNewsId(article.link);
+                    
+                    // Usar titleEs si existe, sino usar title original
+                    const displayTitleSource = article.titleEs || article.title;
+                    
                     // Truncar título
                     const maxLength = 60;
-                    let displayTitle = article.title;
+                    let displayTitle = displayTitleSource;
                     if (displayTitle.length > maxLength) {
                         displayTitle = displayTitle.substring(0, maxLength) + '...';
                     }
                     
+                    // MODIFICADO: href="#" + data-news-id + class
                     html += `
                         <li style="margin-bottom: 0.5rem;">
-                            <a href="${article.link}" 
-                               target="_blank" 
-                               rel="noopener noreferrer"
+                            <a href="#" 
+                               data-news-id="${newsId}"
+                               class="news-detail-link"
                                style="display: flex; gap: 0.5rem; padding: 0.625rem; background: #f8f9fa; border-radius: 6px; text-decoration: none; color: #2c3e50; font-size: 0.8rem; line-height: 1.4; transition: all 0.3s ease; border-left: 2px solid transparent;"
                                onmouseover="this.style.background='#e9ecef'; this.style.borderLeftColor='#3498db'; this.style.paddingLeft='0.875rem'"
                                onmouseout="this.style.background='#f8f9fa'; this.style.borderLeftColor='transparent'; this.style.paddingLeft='0.625rem'"
-                               title="${article.title}">
+                               title="${displayTitleSource}">
                                 <span style="color: #7f8c8d; font-weight: 600; flex-shrink: 0; font-size: 0.7rem;">${formattedDate}</span>
                                 <span style="flex: 1; font-weight: 500;">${displayTitle}</span>
                             </a>
@@ -214,10 +241,50 @@ function renderDateArchiveWidget(articles) {
     // Actualizar contenedor
     container.innerHTML = html;
     
+    // NUEVO: Adjuntar event listeners
+    attachNewsDetailListeners();
+    
+    // Emitir evento personalizado
+    const event = new CustomEvent('dateArchiveRendered', {
+        detail: {
+            articles: articles,
+            count: articles.length
+        }
+    });
+    document.dispatchEvent(event);
+    
     console.log(`✅ Widget renderizado: ${articles.length} noticias, ${years.length} año(s)`);
     
     // FORZAR RECÁLCULO DEL DOM
-    container.offsetHeight; // Force reflow
+    container.offsetHeight;
+}
+
+// ============================================
+// NUEVO: ADJUNTAR LISTENERS PARA DETALLE
+// ============================================
+
+/**
+ * Adjunta event listeners a todos los links de noticias
+ */
+function attachNewsDetailListeners() {
+    const newsLinks = document.querySelectorAll('.news-detail-link');
+    
+    newsLinks.forEach(link => {
+        link.addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            const newsId = this.getAttribute('data-news-id');
+            
+            if (newsId && window.NewsDetailView && window.NewsDetailView.show) {
+                console.log(`🔗 Click en noticia: ${newsId}`);
+                window.NewsDetailView.show(newsId);
+            } else {
+                console.warn('⚠️ NewsDetailView no disponible');
+            }
+        });
+    });
+    
+    console.log(`✅ ${newsLinks.length} links de detalle conectados`);
 }
 
 // ============================================
@@ -256,7 +323,6 @@ function toggleMonth(monthId) {
     const isCurrentlyOpen = monthContent.style.display !== 'none';
     
     if (isCurrentlyOpen) {
-        // Cerrar mes actual
         monthContent.style.display = 'none';
         icon.style.transform = 'rotate(0deg)';
     } else {
@@ -351,7 +417,7 @@ document.addEventListener('advancedFiltersApplied', function(event) {
 });
 
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('📅 Date Widget v4.2 CORREGIDO cargado');
+    console.log('📅 Date Widget v4.3 CON DETALLE cargado');
     
     if (!tryInitialize()) {
         setTimeout(tryInitialize, 500);
@@ -395,6 +461,7 @@ window.renderDateArchiveWidget = renderDateArchiveWidget;
 window.updateDateWidget = updateDateWidget;
 window.toggleYear = toggleYear;
 window.toggleMonth = toggleMonth;
+window.generateNewsId = generateNewsId;
 
 // Estilos adicionales
 const style = document.createElement('style');
@@ -425,4 +492,4 @@ window.DateArchiveWidget = {
     getCurrentFiltered: () => currentFilteredNews
 };
 
-console.log('✅ Date Archive Widget v4.2 - PROBLEMA DE VISIBILIDAD CORREGIDO');
+console.log('✅ Date Archive Widget v4.3 - CON SOPORTE PARA VISTA DETALLE');

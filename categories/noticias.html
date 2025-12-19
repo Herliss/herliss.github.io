@@ -33,6 +33,8 @@
     <link rel="stylesheet" href="/assets/css/news-advanced.css">
     <link rel="stylesheet" href="/assets/css/news-date-widget.css">
     <link rel="stylesheet" href="/assets/css/sidebar-filters.css">
+    <!-- NUEVO: Estilos para Vista de Detalle -->
+    <link rel="stylesheet" href="/assets/css/news-detail-view.css">
 </head>
 <body>
     <!-- Header -->
@@ -81,6 +83,9 @@
                 <h3>⚠️ Error al cargar noticias</h3>
                 <p>Por favor, recarga la página o intenta más tarde.</p>
             </div>
+
+            <!-- NUEVO: Contenedor para Vista de Detalle -->
+            <div id="news-detail-container" class="news-detail-container"></div>
 
             <!-- News Grid (Izquierda) -->
             <div id="news-container" class="news-grid">
@@ -232,8 +237,12 @@
     <script src="/assets/js/news-advanced-filters.js"></script>
     <script src="/assets/js/news-integrated.js"></script>
     <script src="/assets/js/news-ui-filters.js"></script> 
+    <!-- MODIFICADO: Versión actualizada del widget -->
     <script src="/assets/js/news-date-widget.js"></script>
     <script src="/assets/js/news-sidebar-stats.js"></script>
     <script src="/assets/js/sidebar-filters.js"></script>
+    
+    <!-- NUEVO: Vista de Detalle -->
+    <script src="/assets/js/news-detail-view.js"></script>
 </body>
 </html>
