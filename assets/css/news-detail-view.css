@@ -12,7 +12,7 @@
     background: white;
     border-radius: 8px;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-    margin-bottom: 2rem;
+    margin-bottom: 1rem; /* Reducido de 2rem a 1rem */
     overflow: hidden;
     height: auto;
     min-height: auto;
@@ -33,7 +33,7 @@
 .news-content .container.detail-view-active {
     display: grid;
     grid-template-columns: 1fr 300px;
-    gap: 2rem;
+    gap: 1.5rem; /* Reducido de 2rem a 1.5rem */
     align-items: start;
 }
 
@@ -95,7 +95,7 @@
 
 /* === Artículo Principal === */
 .news-detail-article {
-    padding: 2rem 3rem 2rem;
+    padding: 2rem 3rem 1rem; /* Reducir padding inferior */
 }
 
 /* === Metadata === */
@@ -154,33 +154,24 @@
 .detail-actions {
     display: flex;
     gap: 1rem;
-    padding-top: 2rem;
+    padding-top: 1.5rem; /* Reducido de 2rem */
+    padding-bottom: 0.5rem; /* Agregar padding inferior pequeño */
     border-top: 2px solid #e0e0e0;
 }
 
-.btn-read-original {
+/* Usar el mismo estilo estándar del grid */
+.detail-actions .read-more-btn {
     display: inline-flex;
     align-items: center;
-    gap: 0.5rem;
-    background: linear-gradient(135deg, #0066cc 0%, #0052a3 100%);
-    color: white;
-    padding: 0.875rem 1.75rem;
-    border-radius: 6px;
+    color: var(--primary-color, #0066cc);
     text-decoration: none;
     font-weight: 600;
-    font-size: 1rem;
     transition: all 0.3s ease;
-    box-shadow: 0 2px 8px rgba(0, 102, 204, 0.3);
 }
 
-.btn-read-original:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 102, 204, 0.4);
-    background: linear-gradient(135deg, #0052a3 0%, #003d7a 100%);
-}
-
-.btn-read-original:active {
-    transform: translateY(0);
+.detail-actions .read-more-btn:hover {
+    color: var(--secondary-color, #0052a3);
+    gap: 0.5rem;
 }
 
 /* ============================================
@@ -193,17 +184,17 @@
     position: relative;
 }
 
-/* Badge visible de "Noticia Relacionada" */
+/* Badge discreto de "Noticia Relacionada" */
 .related-news-badge {
-    background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
-    color: white;
-    padding: 0.375rem 0.875rem;
+    background: #f8f9fa; /* Mismo color del fondo de tarjeta */
+    color: #7f8c8d; /* Gris discreto */
+    padding: 0.5rem 1rem;
     font-size: 0.75rem;
-    font-weight: 700;
+    font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    text-align: center;
-    border-bottom: 2px solid #2980b9;
+    text-align: left; /* Alineado a la izquierda */
+    border-bottom: 1px solid #e0e0e0;
 }
 
 .related-news-individual:hover {
@@ -344,7 +335,7 @@
 
 @media (max-width: 968px) {
     .news-detail-article {
-        padding: 1.5rem 2rem 2rem;
+        padding: 1.5rem 2rem 1rem; /* Ajustar padding inferior */
     }
     
     .detail-title {
@@ -358,7 +349,7 @@
 
 @media (max-width: 768px) {
     .news-detail-article {
-        padding: 1.5rem 1.25rem 2rem;
+        padding: 1.5rem 1.25rem 0.75rem; /* Reducir padding inferior en móvil */
     }
     
     .news-detail-header {
@@ -377,16 +368,18 @@
     
     .detail-actions {
         flex-direction: column;
+        padding-top: 1rem; /* Reducir en móvil */
+        padding-bottom: 0.5rem;
     }
     
-    .btn-read-original {
+    .detail-actions .read-more-btn {
         width: 100%;
         justify-content: center;
     }
     
     .related-news-badge {
         font-size: 0.625rem;
-        padding: 0.25rem 0.625rem;
+        padding: 0.375rem 0.75rem;
     }
     
     /* Tarjetas relacionadas más compactas en mobile */
@@ -396,6 +389,11 @@
     
     .similarity-badges {
         margin-top: 0.5rem;
+    }
+    
+    /* Reducir gap en móvil */
+    .news-content .container.detail-view-active {
+        gap: 1rem;
     }
 }
 

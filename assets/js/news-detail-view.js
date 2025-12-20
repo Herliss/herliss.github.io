@@ -265,7 +265,7 @@ async function renderNewsDetail(newsData) {
             </div>
             
             <div class="detail-actions">
-                <a href="${link}" target="_blank" rel="noopener noreferrer" class="btn-read-original">
+                <a href="${link}" target="_blank" rel="noopener noreferrer" class="read-more-btn">
                     Leer más →
                 </a>
             </div>
@@ -421,12 +421,12 @@ function createIndividualRelatedCard(item) {
         badges.push(`<span class="similarity-badge badge-product">Prod: ${item.similarities.products.length}</span>`);
     }
     
-    // TARJETA COMPACTA CON TÍTULO VISIBLE
+    // TARJETA COMPACTA CON TÍTULO DISCRETO
     return `
         <article class="news-card related-news-individual">
-            <!-- Título de Noticia Relacionada -->
+            <!-- Título discreto de Noticia Relacionada (sin icono, a la izquierda) -->
             <div class="related-news-badge">
-                📰 Noticia Relacionada
+                Noticia Relacionada
             </div>
             
             <div class="news-card-header">
@@ -449,11 +449,7 @@ function createIndividualRelatedCard(item) {
                 ${badges.length > 0 ? `<div class="similarity-badges">${badges.join('')}</div>` : ''}
             </div>
             
-            <div class="news-card-footer">
-                <a href="${link}" target="_blank" rel="noopener noreferrer" class="read-more-btn">
-                    Leer artículo original →
-                </a>
-            </div>
+            <!-- SIN FOOTER: No mostrar enlace a fuente original en noticias relacionadas -->
         </article>
     `;
 }
