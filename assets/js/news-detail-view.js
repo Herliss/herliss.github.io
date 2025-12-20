@@ -1,9 +1,11 @@
 /**
  * News Detail View - Mostrar detalle de noticia en panel principal
- * VERSIÓN 2.0 - Búsqueda por LINK en lugar de ID
+ * VERSIÓN 2.1 - Búsqueda por LINK + Estilos unificados
  * 
- * SOLUCIÓN: Busca la noticia directamente por su link original
- * en lugar de depender de IDs generados
+ * CARACTERÍSTICAS:
+ * ✅ Búsqueda por link en lugar de ID
+ * ✅ Estilo unificado "Leer más →" (igual que grid principal)
+ * ✅ Fallback a memoria si Firebase falla
  * 
  * Autor: Herliss Briceño
  * Fecha: Diciembre 2024
@@ -183,8 +185,8 @@ function renderNewsDetail(newsData) {
             </div>
             
             <div class="detail-actions">
-                <a href="${link}" target="_blank" rel="noopener noreferrer" class="btn-read-original">
-                    🔗 Leer artículo original
+                <a href="${link}" target="_blank" rel="noopener noreferrer" class="read-more-btn">
+                    Leer más →
                 </a>
             </div>
         </article>
@@ -364,7 +366,7 @@ document.addEventListener('dateArchiveRendered', function() {
 // ============================================
 
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('✅ News Detail View v2.0 cargado (búsqueda por link)');
+    console.log('✅ News Detail View v2.1 cargado (búsqueda por link + estilos unificados)');
     
     // Crear contenedor si no existe
     const newsContainer = document.getElementById('news-container');
@@ -390,4 +392,4 @@ window.NewsDetailView = {
     current: () => currentDetailView
 };
 
-console.log('📰 News Detail View API v2.0 expuesta globalmente');
+console.log('📰 News Detail View API v2.1 expuesta globalmente');
