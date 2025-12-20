@@ -1,6 +1,6 @@
 /* ============================================
    News Detail View - Estilos para Panel de Detalle
-   Mantiene consistencia con el diseño existente
+   VERSIÓN 4.0 - Tarjetas individuales + Alineación correcta del sidebar
    ============================================ */
 
 /* === Contenedor Principal === */
@@ -14,12 +14,49 @@
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
     margin-bottom: 2rem;
     overflow: hidden;
+    height: auto;
+    min-height: auto;
 }
 
 .news-detail-container.active {
     display: block;
     opacity: 1;
     transform: translateY(0);
+}
+
+/* ============================================
+   GRID LAYOUT PARA VISTA DE DETALLE
+   Cuando se activa el detalle, reorganizar el grid
+   ============================================ */
+
+/* Activar grid cuando el detalle está visible */
+.news-content .container.detail-view-active {
+    display: grid;
+    grid-template-columns: 1fr 300px;
+    gap: 2rem;
+    align-items: start;
+}
+
+/* Elementos en el grid cuando el detalle está activo */
+.news-content .container.detail-view-active > #loading,
+.news-content .container.detail-view-active > #error-message {
+    grid-column: 1 / -1;
+    grid-row: 1;
+}
+
+.news-content .container.detail-view-active > .news-detail-container {
+    grid-column: 1;
+    grid-row: 2;
+}
+
+.news-content .container.detail-view-active > .news-grid {
+    grid-column: 1;
+    grid-row: 3;
+}
+
+.news-content .container.detail-view-active > .news-sidebar {
+    grid-column: 2;
+    grid-row: 2 / span 2; /* Empieza a la altura del detalle */
 }
 
 /* === Header con Botón Cerrar === */
@@ -56,9 +93,9 @@
     transform: translateY(0);
 }
 
-/* === Artículo === */
+/* === Artículo Principal === */
 .news-detail-article {
-    padding: 2rem 3rem 3rem;
+    padding: 2rem 3rem 2rem;
 }
 
 /* === Metadata === */
@@ -146,7 +183,99 @@
     transform: translateY(0);
 }
 
-/* === Estados: Loading === */
+/* ============================================
+   NOTICIAS RELACIONADAS - TARJETAS INDIVIDUALES
+   ============================================ */
+
+/* Modificador para tarjetas de noticias relacionadas */
+.related-news-individual {
+    border-left: 4px solid #3498db;
+    position: relative;
+}
+
+/* Badge visible de "Noticia Relacionada" */
+.related-news-badge {
+    background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+    color: white;
+    padding: 0.375rem 0.875rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    text-align: center;
+    border-bottom: 2px solid #2980b9;
+}
+
+.related-news-individual:hover {
+    border-left-color: #2980b9;
+    transform: translateY(-3px);
+}
+
+/* Badge de Score en header */
+.related-score-badge {
+    background: #00a86b;
+    color: white;
+    padding: 0.375rem 0.75rem;
+    border-radius: 15px;
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+
+/* Badges de Similitud */
+.similarity-badges {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin-top: 0.75rem;
+}
+
+.similarity-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 10px;
+    font-size: 0.625rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.badge-cve {
+    background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+    color: white;
+}
+
+.badge-threat {
+    background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%);
+    color: white;
+}
+
+.badge-product {
+    background: linear-gradient(135deg, #f39c12 0%, #d68910 100%);
+    color: white;
+}
+
+.badge-category {
+    background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+    color: white;
+}
+
+/* Ajustar espaciado del body para tarjetas compactas */
+.related-news-individual .news-card-body {
+    padding: 1rem 1.5rem;
+}
+
+.related-news-individual .news-card-body p {
+    margin-bottom: 0;
+    font-size: 0.875rem;
+    line-height: 1.5;
+}
+
+/* ============================================
+   ESTADOS: LOADING Y ERROR
+   ============================================ */
+
 .detail-loading {
     display: flex;
     flex-direction: column;
@@ -177,7 +306,6 @@
     font-weight: 600;
 }
 
-/* === Estados: Error === */
 .detail-error {
     display: flex;
     flex-direction: column;
@@ -210,7 +338,10 @@
     transform: translateY(-2px);
 }
 
-/* === Responsive === */
+/* ============================================
+   RESPONSIVE
+   ============================================ */
+
 @media (max-width: 968px) {
     .news-detail-article {
         padding: 1.5rem 2rem 2rem;
@@ -252,9 +383,26 @@
         width: 100%;
         justify-content: center;
     }
+    
+    .related-news-badge {
+        font-size: 0.625rem;
+        padding: 0.25rem 0.625rem;
+    }
+    
+    /* Tarjetas relacionadas más compactas en mobile */
+    .related-news-individual .news-card-body {
+        padding: 0.875rem 1rem;
+    }
+    
+    .similarity-badges {
+        margin-top: 0.5rem;
+    }
 }
 
-/* === Dark Mode Support === */
+/* ============================================
+   DARK MODE SUPPORT
+   ============================================ */
+
 @media (prefers-color-scheme: dark) {
     .news-detail-container {
         background: #2a2a2a;
@@ -280,12 +428,21 @@
     .detail-actions {
         border-top-color: #4a4a4a;
     }
+    
+    .related-news-individual {
+        background: #2a2a2a;
+    }
 }
 
-/* === Print Styles === */
+/* ============================================
+   PRINT STYLES
+   ============================================ */
+
 @media print {
     .news-detail-header,
-    .detail-actions {
+    .detail-actions,
+    .similarity-badges,
+    .related-news-badge {
         display: none;
     }
     
@@ -297,4 +454,42 @@
         box-shadow: none;
         border: 1px solid #ddd;
     }
+    
+    .related-news-individual {
+        page-break-inside: avoid;
+    }
+}
+
+/* ============================================
+   ANIMACIONES
+   ============================================ */
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.related-news-individual {
+    animation: fadeIn 0.4s ease-out;
+}
+
+/* ============================================
+   ACCESIBILIDAD
+   ============================================ */
+
+.detail-actions a:focus,
+.close-detail-btn:focus {
+    outline: 2px solid #0066cc;
+    outline-offset: 2px;
+}
+
+.similarity-badge:focus {
+    outline: 2px solid white;
+    outline-offset: 2px;
 }
