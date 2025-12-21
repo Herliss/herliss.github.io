@@ -415,18 +415,6 @@ function createIndividualRelatedCard(item) {
         formattedDate = formattedDate.charAt(0).toUpperCase() + formattedDate.slice(1);
     }
     
-    // Badges de similitud
-    const badges = [];
-    if (item.similarities.cves.length > 0) {
-        badges.push(`<span class="similarity-badge badge-cve">CVE: ${item.similarities.cves.length}</span>`);
-    }
-    if (item.similarities.threatActors.length > 0) {
-        badges.push(`<span class="similarity-badge badge-threat">Threat: ${item.similarities.threatActors.length}</span>`);
-    }
-    if (item.similarities.products.length > 0) {
-        badges.push(`<span class="similarity-badge badge-product">Prod: ${item.similarities.products.length}</span>`);
-    }
-    
     // TARJETA COMPACTA CON TÍTULO DISCRETO
     return `
         <article class="news-card related-news-individual">
@@ -449,7 +437,6 @@ function createIndividualRelatedCard(item) {
                     </a>
                 </h3>
                 ${truncatedSummary ? `<p>${truncatedSummary}</p>` : ''}
-                ${badges.length > 0 ? `<div class="similarity-badges">${badges.join('')}</div>` : ''}
             </div>
             
             <div class="news-card-footer">

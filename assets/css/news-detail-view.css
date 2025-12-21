@@ -190,7 +190,6 @@
 
 /* Modificador para tarjetas de noticias relacionadas */
 .related-news-individual {
-    border-left: 4px solid #3498db;
     position: relative;
 }
 
@@ -208,7 +207,6 @@
 }
 
 .related-news-individual:hover {
-    border-left-color: #2980b9;
     transform: translateY(-3px);
 }
 
