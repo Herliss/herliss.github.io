@@ -911,11 +911,16 @@ function createNewsCard(article) {
         ? cleanSummary.substring(0, 150).trim() + '...' 
         : cleanSummary;
     
+    // ✅ NUEVO FORMATO DE FECHA: "Nombre Fuente | día, fecha de Mes de Año"
     const pubDate = new Date(article.pubDate);
-    const formattedTime = pubDate.toLocaleTimeString('es-ES', {
-        hour: '2-digit',
-        minute: '2-digit'
+    let formattedDate = pubDate.toLocaleDateString('es-ES', {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric'
     });
+    // Capitalizar primera letra del día
+    formattedDate = formattedDate.charAt(0).toUpperCase() + formattedDate.slice(1);
     
     const thumbnail = article.thumbnail || '';
     const ciaTags = classifyNewsByCIANR(article);
@@ -926,51 +931,20 @@ function createNewsCard(article) {
         </span>
     `).join('');
     
-    let metadataBadgesHTML = '';
-    if (article.metadata) {
-        const meta = article.metadata;
-        const badges = [];
-        
-        if (meta.relevanceScore >= 80) {
-            badges.push(`<span class="meta-badge priority-high">⭐ ${meta.relevanceScore}%</span>`);
-        }
-        
-        if (meta.cves.length > 0) {
-            badges.push(`<span class="meta-badge cve-badge">${meta.cves.length} CVE</span>`);
-        }
-        
-        if (meta.cvssScore !== null) {
-            const cvssClass = meta.cvssScore >= 9.0 ? 'critical' : meta.cvssScore >= 7.0 ? 'high' : 'medium';
-            badges.push(`<span class="meta-badge cvss-${cvssClass}">CVSS: ${meta.cvssScore.toFixed(1)}</span>`);
-        }
-        
-        if (meta.patchAvailable) {
-            badges.push(`<span class="meta-badge patch-available">✅ Parche</span>`);
-        }
-        
-        metadataBadgesHTML = badges.length > 0 ? `
-            <div class="metadata-badges">
-                ${badges.join('')}
-            </div>
-        ` : '';
-    }
-    
     card.innerHTML = `
         <div class="news-card-header">
             <div class="header-left">
-                <span class="news-source" style="background-color: ${article.sourceColor}">
+                <span class="news-source-text">
                     ${sanitizeHTML(article.sourceName)}
                 </span>
-                <time datetime="${article.pubDate}" class="news-time">
-                    ${formattedTime}
+                <time datetime="${article.pubDate}" class="news-date">
+                    | ${formattedDate}
                 </time>
             </div>
             <div class="cia-tags-container">
                 ${ciaTagsHTML}
             </div>
         </div>
-        
-        ${metadataBadgesHTML}
         
         ${thumbnail ? `
             <div class="news-image">

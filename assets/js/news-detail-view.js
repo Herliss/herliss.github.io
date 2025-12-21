@@ -236,13 +236,15 @@ async function renderNewsDetail(newsData) {
         pubDate = new Date();
     }
     
-    const formattedDate = pubDate.toLocaleDateString('es-ES', {
-        year: 'numeric',
-        month: 'long',
+    // Formato: "Día, Fecha de Mes de Año" con capitalización
+    let formattedDate = pubDate.toLocaleDateString('es-ES', {
+        weekday: 'long',
         day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
+        month: 'long',
+        year: 'numeric'
     });
+    // Capitalizar primera letra del día y mes
+    formattedDate = formattedDate.charAt(0).toUpperCase() + formattedDate.slice(1);
     
     // HTML - TERMINA DESPUÉS DE "Leer más →"
     const detailHTML = `
@@ -254,8 +256,8 @@ async function renderNewsDetail(newsData) {
         
         <article class="news-detail-article">
             <div class="detail-meta">
-                <span class="detail-source">${sourceName}</span>
-                <span class="detail-date">📅 ${formattedDate}</span>
+                <span class="detail-source-text">${sourceName}</span>
+                <span class="detail-date"> | ${formattedDate}</span>
             </div>
             
             <h1 class="detail-title">${titleEs}</h1>
@@ -394,7 +396,7 @@ function createIndividualRelatedCard(item) {
         ? summaryEs.substring(0, 100) + '...' 
         : summaryEs;
     
-    // Formatear fecha
+    // Formatear fecha con formato estándar
     let formattedDate = 'Fecha desconocida';
     if (news.pubDate) {
         let date;
@@ -404,9 +406,13 @@ function createIndividualRelatedCard(item) {
             date = new Date(news.pubDate);
         }
         formattedDate = date.toLocaleDateString('es-ES', {
+            weekday: 'long',
             day: 'numeric',
-            month: 'short'
+            month: 'long',
+            year: 'numeric'
         });
+        // Capitalizar primera letra
+        formattedDate = formattedDate.charAt(0).toUpperCase() + formattedDate.slice(1);
     }
     
     // Badges de similitud
@@ -431,11 +437,8 @@ function createIndividualRelatedCard(item) {
             
             <div class="news-card-header">
                 <div class="header-left">
-                    <span class="news-source">${sourceName}</span>
-                    <span class="news-time">📅 ${formattedDate}</span>
-                </div>
-                <div class="header-right">
-                    <span class="related-score-badge">Score: ${item.score}</span>
+                    <span class="news-source-text">${sourceName}</span>
+                    <span class="news-date"> | ${formattedDate}</span>
                 </div>
             </div>
             
@@ -449,7 +452,11 @@ function createIndividualRelatedCard(item) {
                 ${badges.length > 0 ? `<div class="similarity-badges">${badges.join('')}</div>` : ''}
             </div>
             
-            <!-- SIN FOOTER: No mostrar enlace a fuente original en noticias relacionadas -->
+            <div class="news-card-footer">
+                <a href="${link}" target="_blank" rel="noopener noreferrer" class="read-more-btn">
+                    Leer más →
+                </a>
+            </div>
         </article>
     `;
 }

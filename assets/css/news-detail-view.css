@@ -124,6 +124,16 @@
     font-weight: 600;
 }
 
+/* Estilo sobrio para nombre de fuente (SIN background) */
+.detail-source-text {
+    display: inline-block;
+    color: var(--text-primary, #333);
+    font-size: 0.875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
 /* === Título === */
 .detail-title {
     font-size: 2rem;

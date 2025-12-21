@@ -227,6 +227,23 @@
     font-weight: 600;
 }
 
+/* Estilo sobrio para nombre de fuente (SIN background) */
+.news-source-text {
+    display: inline-block;
+    color: var(--text-primary);
+    font-size: 0.875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Estilo sobrio para fecha (SIN icono) */
+.news-date {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    font-weight: 600;
+}
+
 /* CIA+NR Tags */
 .cia-tags-container {
     display: flex;
