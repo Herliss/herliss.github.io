@@ -63,8 +63,10 @@ function showArticleDetailIntegrated(article) {
 // ============================================
 
 function generateArticleHTML(article) {
-    // Formatear fecha
-    const publishedDate = new Date(article.publishedAt);
+    // Formatear fecha - Conversión correcta de Firestore Timestamp
+    const publishedDate = article.publishedAt.toDate ? 
+        article.publishedAt.toDate() : 
+        new Date(article.publishedAt);
     const formattedDate = publishedDate.toLocaleDateString('es-ES', {
         day: 'numeric',
         month: 'long',

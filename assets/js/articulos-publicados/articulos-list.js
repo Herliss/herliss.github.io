@@ -4,7 +4,7 @@
  * 
  * Autor: Herliss Briceño
  * Fecha: Diciembre 2024
- * Versión: 1.0
+ * Versión: 1.2 - IDs corregidos para articulos-list-container
  */
 
 'use strict';
@@ -62,6 +62,12 @@ async function loadArticlesFromFirestore() {
         updateStats();
         hideLoading();
         
+        // Emitir evento cuando artículos están listos
+        window.dispatchEvent(new CustomEvent('articlesLoaded', { 
+            detail: { articles: allArticles } 
+        }));
+        console.log('📢 Evento articlesLoaded emitido');
+        
     } catch (error) {
         console.error('❌ Error cargando artículos:', error);
         showError();
@@ -73,8 +79,11 @@ async function loadArticlesFromFirestore() {
 // ============================================
 
 function renderArticles(articles) {
-    const container = document.getElementById('articles-container');
-    if (!container) return;
+    const container = document.getElementById('articles-list-container');
+    if (!container) {
+        console.error('❌ Contenedor articles-list-container no encontrado');
+        return;
+    }
     
     if (articles.length === 0) {
         showNoResults();
@@ -89,7 +98,7 @@ function renderArticles(articles) {
     Object.keys(groupedByDate).forEach(monthKey => {
         const monthArticles = groupedByDate[monthKey];
         const firstArticle = monthArticles[0];
-        const publishedDate = new Date(firstArticle.publishedAt);
+        const publishedDate = firstArticle.publishedAt.toDate ? firstArticle.publishedAt.toDate() : new Date(firstArticle.publishedAt);
         
         const monthName = publishedDate.toLocaleDateString('es-ES', { 
             month: 'long', 
@@ -110,6 +119,7 @@ function renderArticles(articles) {
         `;
     });
     
+    container.className = 'articles-list-loaded';
     container.innerHTML = html;
 }
 
@@ -118,9 +128,9 @@ function renderArticles(articles) {
 // ============================================
 
 function createArticleCard(article) {
-    const publishedDate = new Date(article.publishedAt);
+    const publishedDate = article.publishedAt.toDate ? article.publishedAt.toDate() : new Date(article.publishedAt);
     
-    // Formatear fecha sobria: "FUENTE | Día, DD de Mes de AAAA"
+    // Formatear fecha sobria
     const dayName = publishedDate.toLocaleDateString('es-ES', { weekday: 'long' });
     const day = publishedDate.getDate();
     const month = publishedDate.toLocaleDateString('es-ES', { month: 'long' });
@@ -196,7 +206,7 @@ function groupArticlesByMonth(articles) {
     const grouped = {};
     
     articles.forEach(article => {
-        const date = new Date(article.publishedAt);
+        const date = article.publishedAt.toDate ? article.publishedAt.toDate() : new Date(article.publishedAt);
         const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
         
         if (!grouped[monthKey]) {
@@ -288,36 +298,53 @@ function loadArticleDetail(slug) {
 }
 
 // ============================================
-// ESTADOS DE UI
+// ESTADOS DE UI - CORREGIDOS PARA articles-list-container
 // ============================================
 
 function showLoading() {
-    document.getElementById('loading').style.display = 'flex';
-    document.getElementById('error-message').style.display = 'none';
-    document.getElementById('articles-container').style.display = 'none';
+    const container = document.getElementById('articles-list-container');
+    if (container) {
+        container.className = 'articles-list-loading';
+        container.innerHTML = `
+            <div class="loading-spinner">
+                <i class="fas fa-spinner fa-spin"></i>
+                <p>Cargando artículos...</p>
+            </div>
+        `;
+    }
 }
 
 function hideLoading() {
-    document.getElementById('loading').style.display = 'none';
-    document.getElementById('articles-container').style.display = 'grid';
+    const container = document.getElementById('articles-list-container');
+    if (container) {
+        container.className = 'articles-list-loaded';
+    }
 }
 
 function showError() {
-    document.getElementById('loading').style.display = 'none';
-    document.getElementById('error-message').style.display = 'block';
-    document.getElementById('articles-container').style.display = 'none';
+    const container = document.getElementById('articles-list-container');
+    if (container) {
+        container.className = 'articles-list-error';
+        container.innerHTML = `
+            <div class="error-message">
+                <h3>⚠️ Error al cargar artículos</h3>
+                <p>Por favor, recarga la página o intenta más tarde.</p>
+            </div>
+        `;
+    }
 }
 
 function showNoResults() {
-    const container = document.getElementById('articles-container');
-    container.style.display = 'block';
-    container.innerHTML = `
-        <div class="no-results">
-            <h3>📝 No hay artículos publicados</h3>
-            <p>Vuelve pronto para leer nuevos análisis de ciberseguridad.</p>
-        </div>
-    `;
-    hideLoading();
+    const container = document.getElementById('articles-list-container');
+    if (container) {
+        container.className = 'articles-list-loaded';
+        container.innerHTML = `
+            <div class="no-results">
+                <h3>🔍 No hay artículos publicados</h3>
+                <p>Vuelve pronto para leer nuevos análisis de ciberseguridad.</p>
+            </div>
+        `;
+    }
 }
 
 // ============================================
@@ -333,7 +360,7 @@ function capitalize(str) {
 // ============================================
 
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('📝 Artículos List v1.0 cargado');
+    console.log('📚 Artículos List v1.2 cargado');
     
     // Cargar artículos
     setTimeout(() => {

@@ -1,0 +1,152 @@
+/**
+ * Artículos Date Widget - Estilo "Entradas Mensuales"
+ * RÉPLICA EXACTA del diseño visual de news-date-widget.css
+ * 
+ * Autor: Herliss Briceño
+ * Fecha: Diciembre 2024
+ */
+
+/* ============================================
+   WIDGET CONTAINER - Estilo Idéntico a Noticias
+   ============================================ */
+
+.date-archive-widget {
+    background: #d4e6f1; /* Azul claro igual que noticias */
+    padding: 0;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    margin-bottom: 2rem;
+    overflow: hidden;
+}
+
+/* HEADER - Estilo Entradas Mensuales */
+.date-archive-widget h3 {
+    font-size: 1rem;
+    margin: 0;
+    padding: 0.75rem 1rem;
+    color: white;
+    background: linear-gradient(135deg, #4a90a4 0%, #3a7d91 100%); /* Gradiente azul-verdoso */
+    border: none;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 600;
+    text-align: left;
+}
+
+/* ============================================
+   ESTADOS DE CARGA
+   ============================================ */
+
+.archive-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem 1rem;
+    background: white;
+}
+
+.archive-loading .spinner {
+    width: 30px;
+    height: 30px;
+    border: 3px solid #e0e0e0;
+    border-top: 3px solid #4a90a4;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin-bottom: 0.75rem;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.archive-loading p {
+    color: #7f8c8d;
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+/* ============================================
+   ESTADO VACÍO
+   ============================================ */
+
+.archive-empty {
+    background: white;
+    padding: 2rem 1rem;
+}
+
+/* ============================================
+   SCROLLBAR PERSONALIZADO (para listas largas)
+   ============================================ */
+
+.month-articles-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+.month-articles-list::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+}
+
+.month-articles-list::-webkit-scrollbar-thumb {
+    background: #3498db;
+    border-radius: 3px;
+}
+
+.month-articles-list::-webkit-scrollbar-thumb:hover {
+    background: #2980b9;
+}
+
+/* ============================================
+   RESPONSIVE
+   ============================================ */
+
+@media (max-width: 768px) {
+    .date-archive-widget h3 {
+        font-size: 0.9rem;
+        padding: 0.625rem 0.875rem;
+    }
+    
+    .month-articles-list {
+        max-height: 300px !important;
+    }
+}
+
+/* ============================================
+   DARK MODE SUPPORT (opcional)
+   ============================================ */
+
+@media (prefers-color-scheme: dark) {
+    .date-archive-widget {
+        background: #2a2a2a;
+    }
+    
+    .date-archive-widget h3 {
+        background: linear-gradient(135deg, #2c5f6f 0%, #234a57 100%);
+    }
+    
+    .archive-loading,
+    .archive-empty {
+        background: #1a1a1a;
+    }
+    
+    .archive-loading p {
+        color: #b0b0b0;
+    }
+}
+
+/* ============================================
+   ACCESIBILIDAD
+   ============================================ */
+
+.article-detail-link:focus {
+    outline: 2px solid #3498db;
+    outline-offset: 2px;
+}
+
+/* Mejorar contraste en hover */
+.article-detail-link:focus:hover {
+    background: #d6e9f5 !important;
+}

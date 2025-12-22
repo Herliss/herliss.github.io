@@ -69,19 +69,22 @@ document.querySelectorAll('a[href^="#"]').forEach(anchor => {
 let lastScrollTop = 0;
 const header = document.querySelector('.main-header');
 
-window.addEventListener('scroll', function() {
-    const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-    
-    if (scrollTop > lastScrollTop && scrollTop > 100) {
-        // Scroll hacia abajo
-        header.style.transform = 'translateY(-100%)';
-    } else {
-        // Scroll hacia arriba
-        header.style.transform = 'translateY(0)';
-    }
-    
-    lastScrollTop = scrollTop <= 0 ? 0 : scrollTop;
-}, { passive: true });
+// ✅ SOLO ejecutar si el header existe
+if (header) {
+    window.addEventListener('scroll', function() {
+        const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+        
+        if (scrollTop > lastScrollTop && scrollTop > 100) {
+            // Scroll hacia abajo
+            header.style.transform = 'translateY(-100%)';
+        } else {
+            // Scroll hacia arriba
+            header.style.transform = 'translateY(0)';
+        }
+        
+        lastScrollTop = scrollTop <= 0 ? 0 : scrollTop;
+    }, { passive: true });
+}
 
 // ============================================
 // 4. SANITIZACIÓN DE STRINGS (Prevención XSS)

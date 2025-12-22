@@ -6,9 +6,9 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     
     <!-- SEO Meta Tags -->
-    <title>Artículos Publicados | Herliss Briceño</title>
-    <meta name="description" content="Análisis profesionales de ciberseguridad, inteligencia de amenazas y gestión de riesgos tecnológicos. Contenido especializado para CISOs y profesionales de seguridad de la información.">
-    <meta name="keywords" content="artículos ciberseguridad, análisis seguridad información, threat intelligence, gestión riesgos, CISO, seguridad empresarial">
+    <title>Artículos Profesionales de Ciberseguridad | Herliss Briceño</title>
+    <meta name="description" content="Análisis técnicos y artículos especializados sobre ciberseguridad, seguridad de la información y seguridad en IA escritos por Herliss Briceño.">
+    <meta name="keywords" content="artículos ciberseguridad, análisis seguridad, threat intelligence, gestión riesgos, CISO, ISO 27001">
     <meta name="author" content="Herliss Briceño">
     <meta name="robots" content="index, follow">
     
@@ -16,7 +16,7 @@
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://www.herlissbriceno.com/categories/articulos-publicados.html">
     <meta property="og:title" content="Artículos Profesionales de Ciberseguridad">
-    <meta property="og:description" content="Análisis especializados sobre amenazas, riesgos y estrategias de seguridad para organizaciones.">
+    <meta property="og:description" content="Análisis técnicos y artículos especializados sobre amenazas, riesgos y estrategias de ciberseguridad">
     
     <!-- Security Headers -->
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.gstatic.com https://*.googleapis.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://www.gstatic.com https://*.googleapis.com https://*.firebaseapp.com https://firestore.googleapis.com;">
@@ -27,27 +27,25 @@
     <!-- Favicon -->
     <link rel="icon" type="image/png" href="/assets/images/favicon.png">
     
-    <!-- Stylesheets -->
+    <!-- Stylesheets - MISMO ORDEN QUE NOTICIAS -->
     <link rel="stylesheet" href="/assets/css/main.css">
     <link rel="stylesheet" href="/assets/css/news.css">
     <link rel="stylesheet" href="/assets/css/news-date-widget.css">
+    <link rel="stylesheet" href="/assets/css/articles-date-widget.css">
     <link rel="stylesheet" href="/assets/css/news-detail-view.css">
 </head>
 <body>
-    <!-- ============================================
-         HEADER - Navegación Principal
-         ============================================ -->
+    <!-- Header - IDÉNTICO A NOTICIAS -->
     <header class="main-header">
         <nav class="navbar">
             <div class="container">
                 <div class="nav-brand">
-                    <a href="/" aria-label="Inicio">
+                    <a href="/categories/noticias.html" aria-label="Noticias">
                         <h1>Herliss Briceño</h1>
                         <p class="tagline">Seguridad de la Información, Ciberseguridad e IA</p>
                     </a>
                 </div>
                 <ul class="nav-menu" role="navigation">
-                    <li><a href="/">Inicio</a></li>
                     <li><a href="/categories/noticias.html">Noticias</a></li>
                     <li><a href="/categories/articulos-publicados.html" class="active">Artículos</a></li>
                     <li><a href="/about/">Who am I?</a></li>
@@ -61,66 +59,53 @@
         </nav>
     </header>
 
-    <!-- ============================================
-         HERO SECTION
-         ============================================ -->
+    <!-- Hero Section - ESTILO NOTICIAS -->
     <section class="hero-news">
         <div class="container">
             <h1>📝 Artículos Profesionales</h1>
-            <p>Análisis especializados sobre amenazas, riesgos y estrategias de ciberseguridad para organizaciones</p>
+            <p>Análisis técnicos y artículos especializados sobre amenazas, riesgos y estrategias de ciberseguridad para organizaciones</p>
         </div>
     </section>
 
-    <!-- ============================================
-         MAIN CONTENT
-         ============================================ -->
+    <!-- Main Content - ESTRUCTURA NOTICIAS -->
     <main class="news-content">
         <div class="container">
             
-            <!-- ========================================
-                 LOADING STATE
-                 ======================================== -->
-            <div id="loading" class="loading">
+            <!-- Loading / Error States -->
+            <div id="loading" class="loading" style="display: none;">
                 <div class="spinner"></div>
                 <p>Cargando artículos...</p>
             </div>
             
-            <!-- ========================================
-                 ERROR STATE
-                 ======================================== -->
             <div id="error-message" class="error-message" style="display: none;">
                 <h3>⚠️ Error al cargar artículos</h3>
                 <p>Por favor, recarga la página o intenta más tarde.</p>
             </div>
 
-            <!-- ========================================
-                 VISTA DE DETALLE (INTEGRADA)
-                 Se muestra cuando usuario hace click en artículo
-                 ======================================== -->
-            <div id="article-detail-container" class="news-detail-container"></div>
+            <!-- Vista de Detalle (oculta por defecto) -->
+            <div id="news-detail-container" class="news-detail-container"></div>
 
-            <!-- ========================================
-                 GRID DE ARTÍCULOS (Columna Izquierda)
-                 ======================================== -->
-            <div id="articles-container" class="news-grid">
-                <!-- Los artículos se cargarán dinámicamente aquí -->
+            <!-- Articles Grid (Izquierda) -->
+            <div id="articles-list-container" class="news-grid articles-list-loading">
+                <div class="loading-spinner">
+                    <i class="fas fa-spinner fa-spin"></i>
+                    <p>Cargando artículos...</p>
+                </div>
             </div>
 
-            <!-- ========================================
-                 SIDEBAR (Columna Derecha)
-                 ======================================== -->
+            <!-- Sidebar (Derecha) - ESTRUCTURA NOTICIAS -->
             <aside class="news-sidebar">
                 
-                <!-- Widget: Clasificación por Fechas -->
+                <!-- Widget de Artículos por Fecha -->
                 <section class="sidebar-widget date-archive-widget">
-                    <h3>📅 Artículos por Mes</h3>
+                    <h3>📝 Artículos</h3>
                     <div id="date-archive-container" class="archive-loading">
                         <div class="spinner"></div>
                         <p>Cargando clasificación...</p>
                     </div>
                 </section>
 
-                <!-- Widget: Categorías -->
+                <!-- Categorías -->
                 <section class="sidebar-widget">
                     <h3>🏷️ Categorías</h3>
                     <ul class="popular-tags">
@@ -133,7 +118,7 @@
                     </ul>
                 </section>
 
-                <!-- Widget: Estadísticas -->
+                <!-- Estadísticas -->
                 <section class="sidebar-widget">
                     <h3>📊 Estadísticas</h3>
                     <div class="stats-container">
@@ -151,36 +136,28 @@
                         </div>
                     </div>
                 </section>
-
             </aside>
         </div>
     </main>
 
-    <!-- ============================================
-         FOOTER
-         ============================================ -->
+    <!-- Footer - IDÉNTICO A NOTICIAS -->
     <footer class="main-footer">
         <div class="container">
             <div class="footer-content">
-                
-                <!-- Sección: Branding -->
                 <div class="footer-section">
                     <h4>Herliss Briceño</h4>
                     <p>Blog profesional sobre Ciberseguridad e Inteligencia Artificial</p>
                 </div>
                 
-                <!-- Sección: Enlaces -->
                 <div class="footer-section">
                     <h4>Enlaces</h4>
                     <ul>
-                        <li><a href="/">Inicio</a></li>
                         <li><a href="/categories/noticias.html">Noticias</a></li>
                         <li><a href="/categories/articulos-publicados.html">Artículos</a></li>
                         <li><a href="/about/">Who am I?</a></li>
                     </ul>
                 </div>
                 
-                <!-- Sección: Legal -->
                 <div class="footer-section">
                     <h4>Legal</h4>
                     <ul>
@@ -190,15 +167,13 @@
                     </ul>
                 </div>
                 
-                <!-- Sección: Seguridad -->
                 <div class="footer-section">
                     <h4>Seguridad</h4>
                     <p>¿Encontraste una vulnerabilidad?</p>
-                    <a href="mailto:security@herlissbriceno.com" class="security-link">Reportar de forma responsable</a>
+                    <a href="/cdn-cgi/l/email-protection#4d25283f21243e3e632f3f242e28220d2a202c2421632e2220" class="security-link">Reportar de forma responsable</a>
                 </div>
             </div>
             
-            <!-- Footer Bottom -->
             <div class="footer-bottom">
                 <p>&copy; 2025 Herliss Briceño. Todos los derechos reservados.</p>
                 <p class="footer-tech">Artículos profesionales desde Firebase Firestore | Sin cookies ni tracking</p>
@@ -206,23 +181,14 @@
         </div>
     </footer>
 
-    <!-- ============================================
-         FIREBASE SDK
-         ============================================ -->
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <!-- Firebase SDK -->
+    <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
     
-    <!-- ============================================
-         FIREBASE CONFIGURATION
-         ============================================ -->
+    <!-- Firebase Configuration -->
     <script src="/assets/js/firebase-config.js"></script>
     
-    <!-- ============================================
-         JAVASCRIPT MODULES - RUTAS ACTUALIZADAS
-         ============================================ -->
+    <!-- Scripts -->
     <script src="/assets/js/main.js" defer></script>
     <script src="/assets/js/articulos-publicados/articulos-list.js"></script>
-    <script src="/assets/js/articulos-publicados/articulos-date-widget.js"></script>
-    <script src="/assets/js/articulos-publicados/articulo-viewer.js"></script>
-</body>
-</html>
+    <script src="/assets
