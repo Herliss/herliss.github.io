@@ -115,8 +115,8 @@ function renderArticlesArchiveWidget(articles) {
         return;
     }
     
-    // CONSTRUIR HTML - ESTILO ENTRADAS MENSUALES
-    let html = '';
+    // CONSTRUIR HTML - ESTILO ENTRADAS MENSUALES CON PADDING LATERAL
+    let html = '<div style="padding: 0 0.75rem;">';
     
     years.forEach((year, yearIndex) => {
         const yearData = archive[year];
@@ -133,7 +133,7 @@ function renderArticlesArchiveWidget(articles) {
                     style="width: 100%; display: flex; justify-content: space-between; align-items: center; padding: 0.875rem 1rem; background: linear-gradient(135deg, #3498db 0%, #2980b9 100%); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 1rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 0.5rem;">
                     <span style="display: flex; align-items: center; gap: 0.5rem;">
                         <span id="icon-${yearId}" style="transition: transform 0.3s ease; display: inline-block; transform: rotate(${isYearOpen ? '90deg' : '0deg'});">▶</span>
-                        <span>📅 ${year}</span>
+                        <span>${year}</span>
                     </span>
                     <span style="background: rgba(255,255,255,0.3); padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 0.875rem;">
                         Total: ${yearData.total}
@@ -180,11 +180,6 @@ function renderArticlesArchiveWidget(articles) {
                     return dateB - dateA;
                 })
                 .forEach(article => {
-                    const articleDate = article.publishedAt.toDate ? 
-                        article.publishedAt.toDate() : 
-                        new Date(article.publishedAt);
-                    const formattedDate = `${articleDate.getDate()}/${articleDate.getMonth() + 1}`;
-                    
                     // Título
                     const displayTitleSource = article.title;
                     
@@ -195,18 +190,17 @@ function renderArticlesArchiveWidget(articles) {
                         displayTitle = displayTitle.substring(0, maxLength) + '...';
                     }
                     
-                    // Item de artículo (estilo idéntico a noticias)
+                    // Item de artículo sin fecha
                     html += `
                         <li style="margin-bottom: 0.5rem;">
                             <a href="#" 
                                data-article-slug="${article.slug}"
                                class="article-detail-link"
-                               style="display: flex; gap: 0.5rem; padding: 0.625rem; background: #f8f9fa; border-radius: 6px; text-decoration: none; color: #2c3e50; font-size: 0.8rem; line-height: 1.4; transition: all 0.3s ease; border-left: 2px solid transparent;"
-                               onmouseover="this.style.background='#e9ecef'; this.style.borderLeftColor='#3498db'; this.style.paddingLeft='0.875rem'"
-                               onmouseout="this.style.background='#f8f9fa'; this.style.borderLeftColor='transparent'; this.style.paddingLeft='0.625rem'"
+                               style="display: block; padding: 0.625rem 0.875rem; background: #f8f9fa; border-radius: 6px; text-decoration: none; color: #2c3e50; font-size: 0.8rem; line-height: 1.4; transition: all 0.3s ease; border-left: 2px solid transparent; text-align: left;"
+                               onmouseover="this.style.background='#e9ecef'; this.style.borderLeftColor='#3498db'; this.style.paddingLeft='1rem'"
+                               onmouseout="this.style.background='#f8f9fa'; this.style.borderLeftColor='transparent'; this.style.paddingLeft='0.875rem'"
                                title="${displayTitleSource}">
-                                <span style="color: #7f8c8d; font-weight: 600; flex-shrink: 0; font-size: 0.7rem;">${formattedDate}</span>
-                                <span style="flex: 1; font-weight: 500;">${displayTitle}</span>
+                                <span style="font-weight: 500;">${displayTitle}</span>
                             </a>
                         </li>
                     `;
@@ -220,6 +214,8 @@ function renderArticlesArchiveWidget(articles) {
         html += '</div>'; // Cerrar contenedor de meses
         html += '</div>'; // Cerrar año
     });
+    
+    html += '</div>'; // Cerrar wrapper con padding
     
     // Actualizar contenedor
     container.innerHTML = html;
