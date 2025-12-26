@@ -23,6 +23,7 @@
 .date-archive-widget h3 {
     font-size: 1rem;
     margin: 0;
+    margin-bottom: 0 !important;  /* Sin margen inferior */
     padding: 0.75rem 1rem;
     color: white;
     background: linear-gradient(135deg, #4a90a4 0%, #3a7d91 100%); /* Gradiente azul-verdoso */
@@ -75,6 +76,40 @@
 .archive-empty {
     background: white;
     padding: 2rem 1rem;
+}
+
+/* ============================================
+   CONTENEDOR PRINCIPAL - CON PADDING MÍNIMO PROFESIONAL
+   ============================================ */
+
+#date-archive-container {
+    padding: 0.5rem !important;  /* Padding en todos los lados */
+    margin: 0 !important;
+    background: white !important;  /* Fondo blanco como Entradas Mensuales */
+}
+
+#date-archive-container > * {
+    margin-top: 0 !important;
+}
+
+/* Primera div sin margin superior */
+#date-archive-container > div:first-child {
+    margin-top: 0 !important;
+}
+
+/* Primer botón sin margin superior */
+#date-archive-container > div:first-child > button:first-child {
+    margin-top: 0 !important;
+}
+
+#date-archive-container > div:last-child {
+    margin-bottom: 0;
+}
+
+/* Cuando está cargando, permitir el fondo blanco */
+#date-archive-container.archive-loading {
+    background: white !important;
+    padding: 2rem 1rem !important;
 }
 
 /* ============================================

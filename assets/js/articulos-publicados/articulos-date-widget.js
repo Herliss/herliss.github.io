@@ -92,6 +92,7 @@ function renderArticlesArchiveWidget(articles) {
                 <p style="font-size: 0.875rem;">No hay artículos disponibles</p>
             </div>
         `;
+        container.classList.remove('archive-loading');
         lastRenderedArticlesCount = 0;
         return;
     }
@@ -112,11 +113,12 @@ function renderArticlesArchiveWidget(articles) {
                 <p style="font-size: 0.875rem;">Error al procesar fechas</p>
             </div>
         `;
+        container.classList.remove('archive-loading');
         return;
     }
     
-    // CONSTRUIR HTML - ESTILO ENTRADAS MENSUALES CON PADDING LATERAL
-    let html = '<div style="padding: 0 0.75rem;">';
+    // CONSTRUIR HTML - ESTILO ENTRADAS MENSUALES SIN WRAPPER
+    let html = '';
     
     years.forEach((year, yearIndex) => {
         const yearData = archive[year];
@@ -125,9 +127,9 @@ function renderArticlesArchiveWidget(articles) {
         
         console.log(`   📅 Año ${year}: ${Object.keys(yearData.months).length} meses, ${yearData.total} artículos`);
         
-        // HEADER DEL AÑO (estilo idéntico a noticias)
+        // HEADER DEL AÑO (gradiente exacto como Entradas Mensuales)
         html += `
-            <div style="margin-bottom: 1rem;">
+            <div style="margin-bottom: 0.5rem; margin-top: 0;">
                 <button 
                     onclick="toggleArticlesYear('${yearId}')"
                     style="width: 100%; display: flex; justify-content: space-between; align-items: center; padding: 0.875rem 1rem; background: linear-gradient(135deg, #3498db 0%, #2980b9 100%); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 1rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 0.5rem;">
@@ -142,7 +144,7 @@ function renderArticlesArchiveWidget(articles) {
         `;
         
         // CONTENEDOR DE MESES
-        html += `<div id="${yearId}" style="display: ${isYearOpen ? 'block' : 'none'}; padding-left: 0.5rem; margin-bottom: 0.5rem; border-left: 3px solid #3498db;">`;
+        html += `<div id="${yearId}" style="display: ${isYearOpen ? 'block' : 'none'}; padding-left: 0.1rem; margin-bottom: 0.5rem; border-left: 3px solid #3498db;">`;
         
         // Ordenar meses descendentemente
         const months = Object.keys(yearData.months).sort((a, b) => b - a);
@@ -169,7 +171,7 @@ function renderArticlesArchiveWidget(articles) {
             `;
             
             // LISTA DE ARTÍCULOS (estilo idéntico a noticias)
-            html += `<div id="${monthId}" class="month-articles-list" style="display: ${isMonthOpen ? 'block' : 'none'}; padding: 0.5rem 0 0.5rem 1rem; max-height: 400px; overflow-y: auto;">`;
+            html += `<div id="${monthId}" class="month-articles-list" style="display: ${isMonthOpen ? 'block' : 'none'}; padding: 0.5rem 0 0.5rem 0.1rem; max-height: 400px; overflow-y: auto;">`;
             html += '<ul style="list-style: none; padding: 0; margin: 0;">';
             
             // Artículos del mes
@@ -196,9 +198,9 @@ function renderArticlesArchiveWidget(articles) {
                             <a href="#" 
                                data-article-slug="${article.slug}"
                                class="article-detail-link"
-                               style="display: block; padding: 0.625rem 0.875rem; background: #f8f9fa; border-radius: 6px; text-decoration: none; color: #2c3e50; font-size: 0.8rem; line-height: 1.4; transition: all 0.3s ease; border-left: 2px solid transparent; text-align: left;"
-                               onmouseover="this.style.background='#e9ecef'; this.style.borderLeftColor='#3498db'; this.style.paddingLeft='1rem'"
-                               onmouseout="this.style.background='#f8f9fa'; this.style.borderLeftColor='transparent'; this.style.paddingLeft='0.875rem'"
+                               style="display: block; padding: 0.625rem 0.75rem; background: #f8f9fa; border-radius: 6px; text-decoration: none; color: #2c3e50; font-size: 0.8rem; line-height: 1.4; transition: all 0.3s ease; border-left: 2px solid transparent; text-align: left;"
+                               onmouseover="this.style.background='#e9ecef'; this.style.borderLeftColor='#3498db'; this.style.paddingLeft='0.875rem'"
+                               onmouseout="this.style.background='#f8f9fa'; this.style.borderLeftColor='transparent'; this.style.paddingLeft='0.75rem'"
                                title="${displayTitleSource}">
                                 <span style="font-weight: 500;">${displayTitle}</span>
                             </a>
@@ -215,10 +217,11 @@ function renderArticlesArchiveWidget(articles) {
         html += '</div>'; // Cerrar año
     });
     
-    html += '</div>'; // Cerrar wrapper con padding
-    
     // Actualizar contenedor
     container.innerHTML = html;
+    
+    // Quitar clase archive-loading si existe
+    container.classList.remove('archive-loading');
     
     // Adjuntar event listeners
     attachArticleDetailListeners();
@@ -284,12 +287,23 @@ function toggleArticlesMonth(monthId) {
 }
 
 // ============================================
-// INICIALIZACIÓN CON EVENTO
+// INICIALIZACIÓN CON EVENTO + FALLBACK DEFENSIVO
 // ============================================
 window.addEventListener('articlesLoaded', function(event) {
     console.log('📢 Evento articlesLoaded recibido en widget');
     const articles = event.detail.articles;
     renderArticlesArchiveWidget(articles);
+});
+
+// FALLBACK DEFENSIVO (Opción 2 del arquitecto)
+// Si window.allArticles ya existe, renderizar directamente
+document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(() => {
+        if (window.allArticles && window.allArticles.length > 0) {
+            console.log('🔄 Fallback: Cargando artículos desde window.allArticles');
+            renderArticlesArchiveWidget(window.allArticles);
+        }
+    }, 1000);
 });
 
 // ============================================

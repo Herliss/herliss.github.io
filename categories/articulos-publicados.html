@@ -5,29 +5,22 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     
-    <!-- SEO Meta Tags -->
     <title>Artículos Profesionales de Ciberseguridad | Herliss Briceño</title>
     <meta name="description" content="Análisis técnicos y artículos especializados sobre ciberseguridad, seguridad de la información y seguridad en IA escritos por Herliss Briceño.">
     <meta name="keywords" content="artículos ciberseguridad, análisis seguridad, threat intelligence, gestión riesgos, CISO, ISO 27001">
     <meta name="author" content="Herliss Briceño">
     <meta name="robots" content="index, follow">
     
-    <!-- Open Graph -->
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://www.herlissbriceno.com/categories/articulos-publicados.html">
     <meta property="og:title" content="Artículos Profesionales de Ciberseguridad">
     <meta property="og:description" content="Análisis técnicos y artículos especializados sobre amenazas, riesgos y estrategias de ciberseguridad">
     
-    <!-- Security Headers -->
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.gstatic.com https://*.googleapis.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://www.gstatic.com https://*.googleapis.com https://*.firebaseapp.com https://firestore.googleapis.com;">
     
-    <!-- Canonical URL -->
     <link rel="canonical" href="https://www.herlissbriceno.com/categories/articulos-publicados.html">
-    
-    <!-- Favicon -->
     <link rel="icon" type="image/png" href="/assets/images/favicon.png">
     
-    <!-- Stylesheets -->
     <link rel="stylesheet" href="/assets/css/main.css">
     <link rel="stylesheet" href="/assets/css/news.css">
     <link rel="stylesheet" href="/assets/css/news-date-widget.css">
@@ -35,7 +28,6 @@
     <link rel="stylesheet" href="/assets/css/news-detail-view.css">
 </head>
 <body>
-    <!-- Header -->
     <header class="main-header">
         <nav class="navbar">
             <div class="container">
@@ -59,7 +51,6 @@
         </nav>
     </header>
 
-    <!-- Hero Section -->
     <section class="hero-news">
         <div class="container">
             <h1>📝 Artículos Profesionales</h1>
@@ -67,11 +58,9 @@
         </div>
     </section>
 
-    <!-- Main Content -->
     <main class="news-content">
         <div class="container">
             
-            <!-- Loading / Error States -->
             <div id="loading" class="loading" style="display: none;">
                 <div class="spinner"></div>
                 <p>Cargando artículos...</p>
@@ -82,10 +71,8 @@
                 <p>Por favor, recarga la página o intenta más tarde.</p>
             </div>
 
-            <!-- Vista de Detalle -->
             <div id="news-detail-container" class="news-detail-container"></div>
 
-            <!-- Articles Grid -->
             <div id="articles-list-container" class="news-grid articles-list-loading">
                 <div class="loading-spinner">
                     <i class="fas fa-spinner fa-spin"></i>
@@ -93,10 +80,8 @@
                 </div>
             </div>
 
-            <!-- Sidebar -->
             <aside class="news-sidebar">
                 
-                <!-- Widget de Artículos por Fecha -->
                 <section class="sidebar-widget date-archive-widget">
                     <h3>Artículos</h3>
                     <div id="date-archive-container" class="archive-loading">
@@ -105,7 +90,6 @@
                     </div>
                 </section>
 
-                <!-- Categorías -->
                 <section class="sidebar-widget">
                     <h3>🏷️ Categorías</h3>
                     <ul class="popular-tags">
@@ -118,7 +102,6 @@
                     </ul>
                 </section>
 
-                <!-- Estadísticas -->
                 <section class="sidebar-widget">
                     <h3>📊 Estadísticas</h3>
                     <div class="stats-container">
@@ -140,7 +123,6 @@
         </div>
     </main>
 
-    <!-- Footer -->
     <footer class="main-footer">
         <div class="container">
             <div class="footer-content">
@@ -170,7 +152,7 @@
                 <div class="footer-section">
                     <h4>Seguridad</h4>
                     <p>¿Encontraste una vulnerabilidad?</p>
-                    <a href="/cdn-cgi/l/email-protection#442c2136282d37376a26362d27212b042329252d286a272b29" class="security-link">Reportar de forma responsable</a>
+                    <a href="mailto:herliss.briceo@gmail.com" class="security-link">Reportar de forma responsable</a>
                 </div>
             </div>
             
@@ -181,14 +163,12 @@
         </div>
     </footer>
 
-    <!-- Firebase SDK -->
-    <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
-    
-    <!-- Firebase Configuration -->
     <script src="/assets/js/firebase-config.js"></script>
-    
-    <!-- Scripts - ORDEN CORRECTO -->
     <script src="/assets/js/main.js" defer></script>
     <script src="/assets/js/articulos-publicados/articulos-list.js"></script>
-    <script src="/assets/
+    <script src="/assets/js/articulos-publicados/articulos-date-widget.js"></script>
+    <script src="/assets/js/articulos-publicados/articulo-viewer.js"></script>
+</body>
+</html>
