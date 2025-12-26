@@ -90,34 +90,10 @@ function renderArticles(articles) {
         return;
     }
     
-    // Agrupar por fecha
-    const groupedByDate = groupArticlesByMonth(articles);
-    
-    let html = '';
-    
-    Object.keys(groupedByDate).forEach(monthKey => {
-        const monthArticles = groupedByDate[monthKey];
-        const firstArticle = monthArticles[0];
-        const publishedDate = firstArticle.publishedAt.toDate ? firstArticle.publishedAt.toDate() : new Date(firstArticle.publishedAt);
-        
-        const monthName = publishedDate.toLocaleDateString('es-ES', { 
-            month: 'long', 
-            year: 'numeric' 
-        });
-        
-        html += `
-            <div class="news-date-group">
-                <div class="date-group-header">
-                    <span class="date-icon">📅</span>
-                    <span>${capitalize(monthName)}</span>
-                    <span class="date-count">(${monthArticles.length} artículo${monthArticles.length > 1 ? 's' : ''})</span>
-                </div>
-                <div class="news-group-container">
-                    ${monthArticles.map(article => createArticleCard(article)).join('')}
-                </div>
-            </div>
-        `;
-    });
+    // Renderizar tarjetas directamente sin agrupar por fecha
+    let html = '<div class="news-group-container">';
+    html += articles.map(article => createArticleCard(article)).join('');
+    html += '</div>';
     
     container.className = 'articles-list-loaded';
     container.innerHTML = html;
@@ -141,22 +117,17 @@ function createArticleCard(article) {
     // Generar badges de impacto en negocio
     const impactBadges = generateImpactBadges(article.businessImpact);
     
-    // Generar badge de categoría
-    const categoryBadge = article.category ? 
-        `<span class="meta-badge product-badge">${article.category}</span>` : '';
-    
     return `
         <article class="news-card">
             <div class="news-card-header">
                 <div class="header-left">
-                    <span class="news-source-text">${article.author || 'Herliss Briceño'}</span>
+                    <span class="news-source-text">${article.category || 'Sin categoría'}</span>
                     <span class="news-date">${formattedDate}</span>
                 </div>
             </div>
             
-            ${impactBadges || categoryBadge ? `
+            ${impactBadges ? `
                 <div class="metadata-badges">
-                    ${categoryBadge}
                     ${impactBadges}
                 </div>
             ` : ''}
@@ -196,27 +167,6 @@ function generateImpactBadges(businessImpact) {
     if (businessImpact.regulatory) badges.push('<span class="meta-badge regulatory">⚖️ Regulatorio</span>');
     
     return badges.join('');
-}
-
-// ============================================
-// AGRUPAR POR MES
-// ============================================
-
-function groupArticlesByMonth(articles) {
-    const grouped = {};
-    
-    articles.forEach(article => {
-        const date = article.publishedAt.toDate ? article.publishedAt.toDate() : new Date(article.publishedAt);
-        const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-        
-        if (!grouped[monthKey]) {
-            grouped[monthKey] = [];
-        }
-        
-        grouped[monthKey].push(article);
-    });
-    
-    return grouped;
 }
 
 // ============================================
