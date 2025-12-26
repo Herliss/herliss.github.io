@@ -24,7 +24,7 @@
     font-size: 1rem;
     margin: 0;
     margin-bottom: 0 !important;  /* Sin margen inferior */
-    padding: 0.75rem 1rem;
+    padding: 1rem 1.2rem;  /* Padding aumentado */
     color: white;
     background: linear-gradient(135deg, #4a90a4 0%, #3a7d91 100%); /* Gradiente azul-verdoso */
     border: none;
@@ -83,7 +83,7 @@
    ============================================ */
 
 #date-archive-container {
-    padding: 0.5rem !important;  /* Padding en todos los lados */
+    padding: 1.2rem !important;  /* Padding aumentado en todos los lados */
     margin: 0 !important;
     background: white !important;  /* Fondo blanco como Entradas Mensuales */
 }
@@ -110,6 +110,91 @@
 #date-archive-container.archive-loading {
     background: white !important;
     padding: 2rem 1rem !important;
+}
+
+/* ============================================
+   ESTILOS DE BOTONES DE AÑO Y MES - MÁS ESPACIADO
+   ============================================ */
+
+/* Botón de Año */
+.year-button {
+    width: 100%;
+    padding: 1rem 1.2rem !important;  /* Padding aumentado */
+    margin-bottom: 0.75rem !important;  /* Más espacio entre años */
+    background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.year-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.year-button .year-badge {
+    background: rgba(255, 255, 255, 0.3);
+    padding: 0.3rem 0.7rem;
+    border-radius: 12px;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+/* Botón de Mes */
+.month-button {
+    width: 100%;
+    padding: 0.9rem 1.2rem !important;  /* Padding aumentado */
+    margin-bottom: 0.5rem !important;
+    background: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    font-size: 0.95rem;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    transition: all 0.2s ease;
+    color: #2c3e50;
+}
+
+.month-button:hover {
+    background: #f8f9fa;
+    border-color: #3498db;
+    transform: translateX(3px);
+}
+
+.month-button .month-badge {
+    background: #ecf0f1;
+    color: #2c3e50;
+    padding: 0.25rem 0.6rem;
+    border-radius: 10px;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+/* Items de Artículos */
+.article-item {
+    padding: 0.8rem 1rem !important;  /* Padding aumentado */
+    margin-bottom: 0.4rem !important;
+    background: #f8f9fa;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.article-item:hover {
+    background: #e9ecef;
+    transform: translateX(3px);
 }
 
 /* ============================================
