@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- Fondo -->
+  <defs>
+    <linearGradient id="shieldGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#0066cc;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#004999;stop-opacity:1" />
+    </linearGradient>
+    <filter id="shadow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="8"/>
+      <feOffset dx="0" dy="4" result="offsetblur"/>
+      <feComponentTransfer>
+        <feFuncA type="linear" slope="0.3"/>
+      </feComponentTransfer>
+      <feMerge>
+        <feMergeNode/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  
+  <!-- Escudo principal -->
+  <path d="M256 48 
+           C 256 48 128 80 96 96 
+           C 96 96 80 256 96 352 
+           C 112 448 256 480 256 480 
+           C 256 480 400 448 416 352 
+           C 432 256 416 96 416 96 
+           C 384 80 256 48 256 48 Z" 
+        fill="url(#shieldGradient)" 
+        stroke="#ffffff" 
+        stroke-width="12" 
+        filter="url(#shadow)"/>
+  
+  <!-- Checkmark / Tick de seguridad -->
+  <path d="M 200 260 L 230 300 L 320 200" 
+        fill="none" 
+        stroke="#ffffff" 
+        stroke-width="24" 
+        stroke-linecap="round" 
+        stroke-linejoin="round"/>
+  
+  <!-- Brillo superior -->
+  <ellipse cx="256" cy="120" rx="80" ry="40" 
+           fill="rgba(255,255,255,0.2)" 
+           opacity="0.6"/>
+</svg>
