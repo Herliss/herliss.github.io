@@ -255,25 +255,8 @@ function updateCategoryButtons() {
 // ============================================
 
 function updateStats() {
-    // Total artículos
-    const totalEl = document.getElementById('total-articles');
-    if (totalEl) {
-        totalEl.textContent = allArticles.length;
-    }
-    
-    // Total categorías únicas
-    const categories = new Set(allArticles.map(a => a.category).filter(Boolean));
-    const categoriesEl = document.getElementById('total-categories');
-    if (categoriesEl) {
-        categoriesEl.textContent = categories.size;
-    }
-    
-    // Total vistas
-    const totalViews = allArticles.reduce((sum, a) => sum + (a.views || 0), 0);
-    const viewsEl = document.getElementById('total-views');
-    if (viewsEl) {
-        viewsEl.textContent = totalViews;
-    }
+    // Widget de estadísticas eliminado - función deshabilitada
+    // Los elementos #total-articles, #total-categories, #total-views ya no existen
 }
 
 // ============================================
