@@ -131,7 +131,7 @@ function renderDateArchiveWidget(articles) {
                     style="width: 100%; display: flex; justify-content: space-between; align-items: center; padding: 0.875rem 1rem; background: linear-gradient(135deg, #3498db 0%, #2980b9 100%); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 1rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 0.5rem;">
                     <span style="display: flex; align-items: center; gap: 0.5rem;">
                         <span id="icon-${yearId}" style="transition: transform 0.3s ease; display: inline-block; transform: rotate(${isYearOpen ? '90deg' : '0deg'});">▶</span>
-                        <span>📅 ${year}</span>
+                        <span>${year}</span>
                     </span>
                     <span style="background: rgba(255,255,255,0.3); padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 0.875rem;">
                         Total: ${yearData.total}
@@ -174,9 +174,6 @@ function renderDateArchiveWidget(articles) {
             monthData.articles
                 .sort((a, b) => new Date(b.pubDate) - new Date(a.pubDate))
                 .forEach(article => {
-                    const articleDate = new Date(article.pubDate);
-                    const formattedDate = `${articleDate.getDate()}/${articleDate.getMonth() + 1}`;
-                    
                     // Usar titleEs si existe, sino usar title original
                     const displayTitleSource = article.titleEs || article.title;
                     
@@ -193,12 +190,11 @@ function renderDateArchiveWidget(articles) {
                             <a href="#" 
                                data-news-link="${article.link}"
                                class="news-detail-link"
-                               style="display: flex; gap: 0.5rem; padding: 0.625rem; background: #f8f9fa; border-radius: 6px; text-decoration: none; color: #2c3e50; font-size: 0.8rem; line-height: 1.4; transition: all 0.3s ease; border-left: 2px solid transparent;"
+                               style="display: block; padding: 0.625rem; background: #f8f9fa; border-radius: 6px; text-decoration: none; color: #2c3e50; font-size: 0.8rem; line-height: 1.4; transition: all 0.3s ease; border-left: 2px solid transparent;"
                                onmouseover="this.style.background='#e9ecef'; this.style.borderLeftColor='#3498db'; this.style.paddingLeft='0.875rem'"
                                onmouseout="this.style.background='#f8f9fa'; this.style.borderLeftColor='transparent'; this.style.paddingLeft='0.625rem'"
                                title="${displayTitleSource}">
-                                <span style="color: #7f8c8d; font-weight: 600; flex-shrink: 0; font-size: 0.7rem;">${formattedDate}</span>
-                                <span style="flex: 1; font-weight: 500;">${displayTitle}</span>
+                                <span style="font-weight: 500;">${displayTitle}</span>
                             </a>
                         </li>
                     `;
