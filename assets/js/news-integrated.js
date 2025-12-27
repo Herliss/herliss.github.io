@@ -415,8 +415,8 @@ async function loadAllNewsProgressive() {
     // Cargar SOLO desde Firestore
     if (window.NewsDB) {
         try {
-            console.log(`🔍 Consultando Firestore (últimos ${PERFORMANCE_CONFIG.FIRESTORE_RECENT_DAYS} días)...`);
-            const recentNews = await NewsDB.getRecentNews(PERFORMANCE_CONFIG.FIRESTORE_RECENT_DAYS);
+            console.log(`🔍 Consultando Firestore (mes actual)...`);
+            const recentNews = await NewsDB.getCurrentMonthNews();
             
             if (recentNews.length > 0) {
                 console.log(`✅ ${recentNews.length} noticias cargadas desde Firestore (INSTANTÁNEO)`);
@@ -567,7 +567,7 @@ async function loadFreshNewsFromRSS(backgroundMode = false) {
                 
                 // Si es modo background, actualizar UI con nuevos datos
                 if (backgroundMode) {
-                    const updatedNews = await NewsDB.getRecentNews(PERFORMANCE_CONFIG.FIRESTORE_RECENT_DAYS);
+                    const updatedNews = await NewsDB.getCurrentMonthNews();
                     if (updatedNews.length > window.newsData.length) {
                         console.log('🔄 Nuevas noticias disponibles, actualizando UI...');
                         processAndRenderNews(updatedNews);

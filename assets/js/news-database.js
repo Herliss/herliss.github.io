@@ -204,6 +204,55 @@ const NewsDB = {
     },
     
     /**
+     * Obtiene noticias del mes actual ÚNICAMENTE
+     * 
+     * @returns {Promise<Array>} - Array de noticias del mes en curso
+     */
+    async getCurrentMonthNews() {
+        if (!this.db) {
+            console.warn('⚠️ Firestore no disponible');
+            return [];
+        }
+        
+        try {
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = now.getMonth(); // 0-11
+            
+            // Primer día del mes a las 00:00:00
+            const startOfMonth = new Date(year, month, 1, 0, 0, 0);
+            
+            // Último día del mes a las 23:59:59
+            const endOfMonth = new Date(year, month + 1, 0, 23, 59, 59);
+            
+            console.log(`📅 Consultando mes actual: ${startOfMonth.toLocaleDateString('es-ES')} - ${endOfMonth.toLocaleDateString('es-ES')}`);
+            
+            const snapshot = await this.db.collection('news')
+                .where('pubDate', '>=', firebase.firestore.Timestamp.fromDate(startOfMonth))
+                .where('pubDate', '<=', firebase.firestore.Timestamp.fromDate(endOfMonth))
+                .orderBy('pubDate', 'desc')
+                .get();
+            
+            const articles = [];
+            snapshot.forEach(doc => {
+                const data = doc.data();
+                articles.push({
+                    ...data,
+                    pubDate: data.pubDate.toDate().toISOString()
+                });
+            });
+            
+            const mesNombre = now.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
+            console.log(`✅ ${articles.length} noticias de ${mesNombre} cargadas`);
+            return articles;
+            
+        } catch (error) {
+            console.error('❌ Error consultando mes actual:', error);
+            return [];
+        }
+    },
+    
+    /**
      * Obtiene noticias de un mes específico
      * 
      * @param {number} year - Año (ej: 2024)
