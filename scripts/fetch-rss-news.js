@@ -322,10 +322,10 @@ async function processArticleWithClaude(article, monthlyBudget) {
 function determineProcessingLevel(monthlyBudget) {
     const remaining = SAFETY_CONFIG.MONTHLY_BUDGET_LIMIT - monthlyBudget;
     
-    if (remaining >= 2.00) return 'full';      // Resumen + 2 traducciones
-    if (remaining >= 1.00) return 'medium';    // Solo resumen + traducción de resumen
-    if (remaining >= 0.50) return 'basic';     // Solo resumen en inglés
-    return 'none';                             // Fallback extractivo
+    if (remaining >= 1.00) return 'full';      // Resumen + 2 traducciones (titleEs + summaryEs)
+    if (remaining >= 0.50) return 'medium';    // Solo resumen + traducción de resumen (summaryEs)
+    if (remaining >= 0.25) return 'basic';     // Solo resumen en inglés
+    return 'none';                             // Fallback extractivo (sin Claude API)
 }
 
 function buildOptimizedPrompt(article, level) {
