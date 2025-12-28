@@ -72,29 +72,11 @@ const NEWS_SOURCES = {
         color: '#2ecc71',
         category: 'general'
     },
-    microsoft: {
-        name: 'Microsoft Security',
-        rss: 'https://www.microsoft.com/security/blog/feed/',
-        color: '#00a4ef',
-        category: 'corporate'
-    },
     uscert: {
         name: 'US-CERT (CISA)',
         rss: 'https://www.cisa.gov/cybersecurity-advisories/all.xml',
         color: '#c0392b',
         category: 'intelligence'
-    },
-    securityweek: {
-        name: 'SecurityWeek',
-        rss: 'https://www.securityweek.com/rss/',
-        color: '#3498db',
-        category: 'general'
-    },
-    darkreading: {
-        name: 'Dark Reading',
-        rss: 'https://www.darkreading.com/rss.xml',
-        color: '#34495e',
-        category: 'general'
     },
     krebsonsecurity: {
         name: 'Krebs on Security',
@@ -102,35 +84,11 @@ const NEWS_SOURCES = {
         color: '#16a085',
         category: 'blog'
     },
-    scmagazine: {
-        name: 'SC Magazine',
-        rss: 'https://www.scmagazine.com/home/feed/',
-        color: '#e67e22',
-        category: 'general'
-    },
-    cybernews: {
-        name: 'Cybernews',
-        rss: 'https://cybernews.com/feed/',
-        color: '#9b59b6',
-        category: 'general'
-    },
-    talos: {
-        name: 'Talos Intelligence',
-        rss: 'https://blog.talosintelligence.com/feeds/posts/default',
-        color: '#1abc9c',
-        category: 'intelligence'
-    },
     virustotal: {
         name: 'VirusTotal Blog',
         rss: 'https://blog.virustotal.com/feeds/posts/default',
         color: '#27ae60',
         category: 'intelligence'
-    },
-    googlecloud: {
-        name: 'Google Cloud Security',
-        rss: 'https://cloud.google.com/blog/topics/security/rss/',
-        color: '#4285f4',
-        category: 'corporate'
     },
     cisco: {
         name: 'Cisco Security',
@@ -144,17 +102,23 @@ const NEWS_SOURCES = {
         color: '#fa582d',
         category: 'intelligence'
     },
-    crowdstrike: {
-        name: 'CrowdStrike',
-        rss: 'https://www.crowdstrike.com/blog/feed/',
-        color: '#ec1f26',
-        category: 'corporate'
+    unaaldia: {
+        name: 'Una al Día (Hispasec)',
+        rss: 'http://feeds.feedburner.com/hispasec/zCAd',
+        color: '#3498db',
+        category: 'general'
     },
-    mandiant: {
-        name: 'Mandiant',
-        rss: 'https://www.mandiant.com/resources/rss',
-        color: '#ff6600',
-        category: 'intelligence'
+    cybersecuritynews: {
+        name: 'Cybersecurity News',
+        rss: 'https://cybersecuritynews.com/feed/',
+        color: '#9b59b6',
+        category: 'general'
+    },
+    seguinfo: {
+        name: 'Segu-Info',
+        rss: 'http://feeds.feedburner.com/NoticiasSeguridadInformatica',
+        color: '#f39c12',
+        category: 'blog'
     }
 };
 
