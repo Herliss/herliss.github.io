@@ -34,14 +34,14 @@ function debugLog(...args) {
 
 const SAFETY_CONFIG = {
     // Límites de presupuesto
-    MONTHLY_BUDGET_LIMIT: 4.00,         // $4 USD/mes máximo
-    ALERT_THRESHOLD: 3.00,              // Alertar a $3 USD
-    DAILY_BUDGET_LIMIT: 0.15,           // ~$4.50/mes si se usa todos los días
+    MONTHLY_BUDGET_LIMIT: 5.00,         // $5 USD/mes máximo
+    ALERT_THRESHOLD: 4.00,              // Alertar a $4 USD
+    DAILY_BUDGET_LIMIT: 0.18,           // ~$5.40/mes si se usa todos los días
     
     // Límites por ejecución
-    MAX_CALLS_PER_RUN: 50,              // Máximo 50 llamadas API por workflow
+    MAX_CALLS_PER_RUN: 100,             // Máximo 100 llamadas API por workflow
     MAX_CALLS_PER_ARTICLE: 1,           // 1 llamada batch por artículo
-    MAX_ARTICLES_PER_RUN: 100,          // 🔥 NUEVO: Límite global de artículos a procesar
+    MAX_ARTICLES_PER_RUN: 150,          // 🔥 NUEVO: Límite global de artículos a procesar
     
     // Timeouts
     API_TIMEOUT: 30000,                 // 30 segundos por llamada
