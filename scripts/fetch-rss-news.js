@@ -739,11 +739,13 @@ function parseRSS(xmlData, sourceName) {
 // GUARDAR EN FIREBASE
 // ============================================
 
-async function saveToFirestore(db, articles) {
+async function saveToFirestore(db, articles, monthlyBudget = 0) {
     console.log(`\n💾 Guardando ${articles.length} noticias en Firestore...`);
     
     let batch = db.batch();  // 👈 Cambio importante: usar let en lugar de const
     let saved = 0;
+    let visibleCount = 0;
+    let needsTranslationCount = 0;
     
     for (const article of articles) {
         try {
@@ -758,6 +760,15 @@ async function saveToFirestore(db, articles) {
             const newsRef = db.collection('news').doc(newsId);
             
             const pubDate = new Date(article.pubDate);
+            
+            // Determinar visibilidad: solo visible si tiene traducción completa O si está en inglés por falta de presupuesto
+            const hasTranslation = !!(article.titleEs && article.summaryEs);
+            const hasEnglishContent = !!(article.title && article.summary);
+            const budgetExhausted = (SAFETY_CONFIG.MONTHLY_BUDGET_LIMIT - (monthlyBudget + actualCost)) < 0.25;
+            
+            // visible: true si tiene traducción O si presupuesto agotado pero tiene contenido en inglés
+            const visible = hasTranslation || (budgetExhausted && hasEnglishContent);
+            const needsTranslation = !hasTranslation && hasEnglishContent;
             
             const newsData = {
                 id: newsId,
@@ -779,12 +790,20 @@ async function saveToFirestore(db, articles) {
                 day: pubDate.getDate(),
                 dateKey: `${pubDate.getFullYear()}-${String(pubDate.getMonth() + 1).padStart(2, '0')}-${String(pubDate.getDate()).padStart(2, '0')}`,
                 savedAt: Timestamp.now(),
-                updatedAt: Timestamp.now()
+                updatedAt: Timestamp.now(),
+                // NUEVOS CAMPOS - OPCIÓN B
+                visible: visible,                    // Solo visible si procesada completamente
+                processed: hasTranslation,           // true si tiene traducción
+                needsTranslation: needsTranslation   // true si necesita re-procesamiento
             };
             
             // SOLUCIÓN CRÍTICA: Usar set sin merge para sobrescribir completamente los documentos
             batch.set(newsRef, newsData);
             saved++;
+            
+            // Contadores para estadísticas
+            if (newsData.visible) visibleCount++;
+            if (newsData.needsTranslation) needsTranslationCount++;
             
             if (saved % 500 === 0) {
                 await batch.commit();
@@ -802,6 +821,8 @@ async function saveToFirestore(db, articles) {
     }
     
     console.log(`✅ ${saved} noticias guardadas en Firestore`);
+    console.log(`   📊 Visibles: ${visibleCount} (${Math.round(visibleCount/saved*100)}%)`);
+    console.log(`   ⏳ Pendientes traducción: ${needsTranslationCount}`);
     return saved;
 }
 
@@ -884,7 +905,7 @@ async function main() {
     
     // Guardar en Firebase (sin logs de debugging innecesarios)
     if (allArticles.length > 0) {
-        await saveToFirestore(db, allArticles);
+        await saveToFirestore(db, allArticles, monthlyBudget + actualCost);
     }
     
     // Registrar uso de API

@@ -149,7 +149,9 @@ const NewsDB = {
             
             console.log(`🔍 Consultando noticias: ${startDate.toLocaleDateString()} - ${endDate.toLocaleDateString()}`);
             
+            // MODIFICACIÓN: Solo obtener noticias con visible: true
             const snapshot = await this.db.collection('news')
+                .where('visible', '==', true)  // ← NUEVO: Filtrar solo visibles
                 .where('pubDate', '>=', startTimestamp)
                 .where('pubDate', '<=', endTimestamp)
                 .orderBy('pubDate', 'desc')
@@ -227,7 +229,9 @@ const NewsDB = {
             
             console.log(`📅 Consultando mes actual: ${startOfMonth.toLocaleDateString('es-ES')} - ${endOfMonth.toLocaleDateString('es-ES')}`);
             
+            // MODIFICACIÓN: Solo obtener noticias con visible: true
             const snapshot = await this.db.collection('news')
+                .where('visible', '==', true)  // ← NUEVO: Filtrar solo visibles
                 .where('pubDate', '>=', firebase.firestore.Timestamp.fromDate(startOfMonth))
                 .where('pubDate', '<=', firebase.firestore.Timestamp.fromDate(endOfMonth))
                 .orderBy('pubDate', 'desc')
@@ -265,7 +269,9 @@ const NewsDB = {
         try {
             console.log(`🔍 Consultando noticias de ${month}/${year}`);
             
+            // MODIFICACIÓN: Solo obtener noticias con visible: true
             const snapshot = await this.db.collection('news')
+                .where('visible', '==', true)  // ← NUEVO: Filtrar solo visibles
                 .where('year', '==', year)
                 .where('month', '==', month)
                 .orderBy('pubDate', 'desc')
@@ -305,8 +311,9 @@ const NewsDB = {
         try {
             console.log('📊 Calculando estadísticas mensuales...');
             
-            // Obtener últimas 1000 noticias
+            // Obtener últimas 1000 noticias visibles
             const snapshot = await this.db.collection('news')
+                .where('visible', '==', true)  // ← NUEVO: Solo noticias visibles
                 .orderBy('pubDate', 'desc')
                 .limit(1000)
                 .get();
