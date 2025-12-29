@@ -957,9 +957,8 @@ function createNewsCard(article) {
         
         <div class="news-card-body">
             <h3>
-                <a href="${sanitizeHTML(article.link)}" 
-                   target="_blank" 
-                   rel="noopener noreferrer">
+                <a href="javascript:void(0)" 
+                   onclick="window.NewsDetailView.show('${sanitizeHTML(article.link)}')">
                     ${sanitizeHTML(titleEs)}
                 </a>
             </h3>
