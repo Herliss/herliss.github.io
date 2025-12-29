@@ -41,7 +41,7 @@ const SAFETY_CONFIG = {
     // Límites por ejecución
     MAX_CALLS_PER_RUN: 100,             // Máximo 100 llamadas API por workflow
     MAX_CALLS_PER_ARTICLE: 1,           // 1 llamada batch por artículo
-    MAX_ARTICLES_PER_RUN: 500,          // 🔥 AUMENTADO: Procesar hasta 500 artículos (anteriormente 150)
+    MAX_ARTICLES_PER_RUN: 150,          // 🔥 NUEVO: Límite global de artículos a procesar
     
     // Timeouts
     API_TIMEOUT: 30000,                 // 30 segundos por llamada
@@ -135,7 +135,6 @@ let actualInputTokens = 0;
 let actualOutputTokens = 0;
 let actualCost = 0;
 let articlesProcessed = 0;
-let articlesSkipped = 0;  // 🔥 NUEVO: Contador de noticias ya existentes
 let apiErrors = 0;
 let fallbackUsed = 0;
 
@@ -740,13 +739,11 @@ function parseRSS(xmlData, sourceName) {
 // GUARDAR EN FIREBASE
 // ============================================
 
-async function saveToFirestore(db, articles, monthlyBudget = 0) {
+async function saveToFirestore(db, articles) {
     console.log(`\n💾 Guardando ${articles.length} noticias en Firestore...`);
     
     let batch = db.batch();  // 👈 Cambio importante: usar let en lugar de const
     let saved = 0;
-    let visibleCount = 0;
-    let needsTranslationCount = 0;
     
     for (const article of articles) {
         try {
@@ -761,17 +758,6 @@ async function saveToFirestore(db, articles, monthlyBudget = 0) {
             const newsRef = db.collection('news').doc(newsId);
             
             const pubDate = new Date(article.pubDate);
-            
-            // Determinar visibilidad: solo visible si tiene traducción completa O si está en inglés por falta de presupuesto
-            // CORRECCIÓN: Verificar que titleEs y summaryEs no sean strings vacíos
-            const hasTranslation = (article.titleEs && article.titleEs.trim().length > 0 && 
-                                   article.summaryEs && article.summaryEs.trim().length > 0);
-            const hasEnglishContent = !!(article.title && article.summary);
-            const budgetExhausted = (SAFETY_CONFIG.MONTHLY_BUDGET_LIMIT - (monthlyBudget + actualCost)) < 0.25;
-            
-            // visible: true si tiene traducción O si presupuesto agotado pero tiene contenido en inglés
-            const visible = hasTranslation || (budgetExhausted && hasEnglishContent);
-            const needsTranslation = !hasTranslation && hasEnglishContent;
             
             const newsData = {
                 id: newsId,
@@ -793,20 +779,12 @@ async function saveToFirestore(db, articles, monthlyBudget = 0) {
                 day: pubDate.getDate(),
                 dateKey: `${pubDate.getFullYear()}-${String(pubDate.getMonth() + 1).padStart(2, '0')}-${String(pubDate.getDate()).padStart(2, '0')}`,
                 savedAt: Timestamp.now(),
-                updatedAt: Timestamp.now(),
-                // NUEVOS CAMPOS - OPCIÓN B
-                visible: visible,                    // Solo visible si procesada completamente
-                processed: hasTranslation,           // true si tiene traducción
-                needsTranslation: needsTranslation   // true si necesita re-procesamiento
+                updatedAt: Timestamp.now()
             };
             
             // SOLUCIÓN CRÍTICA: Usar set sin merge para sobrescribir completamente los documentos
             batch.set(newsRef, newsData);
             saved++;
-            
-            // Contadores para estadísticas
-            if (newsData.visible) visibleCount++;
-            if (newsData.needsTranslation) needsTranslationCount++;
             
             if (saved % 500 === 0) {
                 await batch.commit();
@@ -824,57 +802,7 @@ async function saveToFirestore(db, articles, monthlyBudget = 0) {
     }
     
     console.log(`✅ ${saved} noticias guardadas en Firestore`);
-    console.log(`   📊 Visibles: ${visibleCount} (${Math.round(visibleCount/saved*100)}%)`);
-    console.log(`   ⏳ Pendientes traducción: ${needsTranslationCount}`);
     return saved;
-}
-
-// ============================================
-// VERIFICACIÓN DE DUPLICADOS
-// ============================================
-
-/**
- * Verifica si una noticia ya existe en Firestore y está completamente traducida
- * @param {Object} db - Instancia de Firestore
- * @param {string} articleLink - URL del artículo
- * @returns {Promise<boolean>} - true si existe y está traducida, false si necesita procesarse
- */
-async function checkIfArticleExists(db, articleLink) {
-    try {
-        // Generar el mismo ID que se usa al guardar
-        const crypto = require('crypto');
-        const newsId = crypto
-            .createHash('sha256')
-            .update(articleLink)
-            .digest('hex')
-            .substring(0, 16);
-        
-        // Verificar si existe en Firestore
-        const docRef = db.collection('news').doc(newsId);
-        const doc = await docRef.get();
-        
-        if (!doc.exists) {
-            return false;  // No existe, debe procesarse
-        }
-        
-        const data = doc.data();
-        
-        // Verificar si tiene traducción completa
-        const hasTranslation = (data.titleEs && data.titleEs.trim().length > 0 && 
-                               data.summaryEs && data.summaryEs.trim().length > 0);
-        
-        if (hasTranslation && data.visible === true) {
-            // Ya existe Y está traducida → SKIP
-            return true;
-        }
-        
-        // Existe pero sin traducción → Debe re-procesarse
-        return false;
-        
-    } catch (error) {
-        console.error(`   ⚠️ Error verificando duplicado: ${error.message}`);
-        return false;  // En caso de error, procesar por seguridad
-    }
 }
 
 // ============================================
@@ -913,20 +841,10 @@ async function main() {
                 console.log(`   ✅ ${articles.length} artículos encontrados`);
                 
                 const enrichedArticles = [];
-                let skipped = 0;
-                
                 for (const article of articles) {
                     // Verificar límite global antes de procesar cada artículo
                     if (articlesProcessed >= SAFETY_CONFIG.MAX_ARTICLES_PER_RUN) {
                         break;
-                    }
-                    
-                    // 🔥 NUEVO: Verificar si ya existe en Firebase
-                    const alreadyExists = await checkIfArticleExists(db, article.link);
-                    if (alreadyExists) {
-                        skipped++;
-                        articlesSkipped++;  // Incrementar contador global
-                        continue;  // ⏭️ SKIP - Ya existe y está traducida
                     }
                     
                     const enriched = {
@@ -937,7 +855,7 @@ async function main() {
                         metadata: enrichMetadata(article)
                     };
                     
-                    // Procesar con Claude API (solo noticias NUEVAS)
+                    // Procesar con Claude API
                     const aiResult = await processArticleWithClaude(enriched, monthlyBudget + actualCost);
                     
                     enriched.summary = aiResult.summary;
@@ -949,10 +867,6 @@ async function main() {
                     
                     // Delay para evitar rate limiting
                     await new Promise(resolve => setTimeout(resolve, 200));
-                }
-                
-                if (skipped > 0) {
-                    console.log(`   ⏭️ ${skipped} noticias ya existían (no re-procesadas)`);
                 }
                 
                 allArticles.push(...enrichedArticles);
@@ -970,7 +884,7 @@ async function main() {
     
     // Guardar en Firebase (sin logs de debugging innecesarios)
     if (allArticles.length > 0) {
-        await saveToFirestore(db, allArticles, monthlyBudget + actualCost);
+        await saveToFirestore(db, allArticles);
     }
     
     // Registrar uso de API
@@ -983,7 +897,6 @@ async function main() {
     console.log(`✅ Fuentes exitosas: ${successfulSources}`);
     console.log(`❌ Fuentes fallidas: ${failedSources}`);
     console.log(`📰 Artículos procesados: ${articlesProcessed}`);
-    console.log(`⏭️ Artículos saltados (ya existían): ${articlesSkipped}`);
     console.log(`🤖 Llamadas API: ${apiCallCount}`);
     console.log(`⚠️ Errores API: ${apiErrors}`);
     console.log(`🔄 Fallback usado: ${fallbackUsed} veces`);
