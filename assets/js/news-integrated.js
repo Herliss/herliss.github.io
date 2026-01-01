@@ -420,8 +420,8 @@ async function loadAllNewsProgressive() {
                 processAndRenderNews(recentNews);
                 hideProgressBar();
                 
-                // Mostrar badge de caché
-                showCacheBadge(recentNews.length);
+                // Mostrar badge de caché con noticias del mes actual
+                showCacheBadge(recentNews);
                 
                 return;
             } else {
@@ -611,7 +611,7 @@ function showPartialLoadWarning(successful, total) {
     }
 }
 
-function showCacheBadge(count) {
+function showCacheBadge(articles) {
     // Obtener mes y año actual
     const now = new Date();
     const meses = [
@@ -621,9 +621,18 @@ function showCacheBadge(count) {
     const mesActual = meses[now.getMonth()];
     const anioActual = now.getFullYear();
     
+    // FILTRAR solo noticias del mes actual
+    const noticiasDelMes = articles.filter(article => {
+        const articleDate = new Date(article.pubDate);
+        return articleDate.getMonth() === now.getMonth() && 
+               articleDate.getFullYear() === now.getFullYear();
+    });
+    
+    const count = noticiasDelMes.length;
+    
     const badge = document.createElement('div');
     badge.className = 'cache-badge';
-    badge.innerHTML = `📰 ${count} noticias en ${mesActual} ${anioActual}`;
+    badge.innerHTML = `${count} noticias en ${mesActual} ${anioActual}`;
     badge.style.cssText = `
         position: fixed;
         bottom: 20px;
