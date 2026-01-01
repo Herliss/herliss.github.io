@@ -204,6 +204,56 @@ const NewsDB = {
     },
     
     /**
+     * Obtiene TODAS las noticias disponibles
+     * Con FILTRO OPCIONAL desde una fecha específica
+     * 
+     * @param {Date} fromDate - Fecha mínima (opcional). Si se omite, trae todas las noticias
+     * @returns {Promise<Array>}
+     */
+    async getAllNews(fromDate = null) {
+        if (!this.db) {
+            console.warn('⚠️ Firestore no disponible');
+            return [];
+        }
+        
+        try {
+            console.log('🔍 Consultando noticias de Firestore...');
+            
+            let query = this.db.collection('news');
+            
+            // Si se especifica fecha de inicio, filtrar
+            if (fromDate) {
+                const fromTimestamp = firebase.firestore.Timestamp.fromDate(fromDate);
+                query = query.where('pubDate', '>=', fromTimestamp);
+                console.log(`   📅 Desde: ${fromDate.toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' })}`);
+            }
+            
+            const snapshot = await query
+                .orderBy('pubDate', 'desc')
+                .limit(5000) // Límite ajustado: ~18 meses de historial (270 noticias/mes)
+                .get();
+            
+            const articles = [];
+            snapshot.forEach(doc => {
+                const data = doc.data();
+                articles.push({
+                    ...data,
+                    // Convertir Timestamp a ISO string
+                    pubDate: data.pubDate.toDate().toISOString()
+                });
+            });
+            
+            const dateInfo = fromDate ? ` desde ${fromDate.toLocaleDateString('es-ES', { year: 'numeric', month: 'long' })}` : ' (TODAS)';
+            console.log(`✅ ${articles.length} noticias recuperadas${dateInfo}`);
+            return articles;
+            
+        } catch (error) {
+            console.error('❌ Error consultando Firestore:', error);
+            return [];
+        }
+    },
+    
+    /**
      * Obtiene noticias del mes actual ÚNICAMENTE
      * 
      * @returns {Promise<Array>} - Array de noticias del mes en curso
@@ -305,10 +355,10 @@ const NewsDB = {
         try {
             console.log('📊 Calculando estadísticas mensuales...');
             
-            // Obtener últimas 1000 noticias
+            // Obtener últimas 5000 noticias (~18 meses)
             const snapshot = await this.db.collection('news')
                 .orderBy('pubDate', 'desc')
-                .limit(1000)
+                .limit(5000)
                 .get();
             
             const monthCount = {};
@@ -483,6 +533,7 @@ window.NewsDB = NewsDB;
 console.log('✅ NewsDB v1.0 cargado y listo');
 console.log('📚 Métodos disponibles:');
 console.log('   - NewsDB.saveNews(articles)');
+console.log('   - NewsDB.getAllNews(fromDate)');
 console.log('   - NewsDB.getRecentNews(days)');
 console.log('   - NewsDB.getTodayNews()');
 console.log('   - NewsDB.getMonthNews(year, month)');

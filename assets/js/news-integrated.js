@@ -74,13 +74,6 @@ const NEWS_SOURCES = {
         category: 'corporate',
         priority: 1
     },
-    uscert: {
-        name: 'US-CERT (CISA)',
-        rss: 'https://www.cisa.gov/cybersecurity-advisories/all.xml',
-        color: '#c0392b',
-        category: 'intelligence',
-        priority: 1
-    },
     securityweek: {
         name: 'SecurityWeek',
         rss: 'https://www.securityweek.com/rss/',
@@ -167,7 +160,7 @@ const NEWS_SOURCES = {
     }
 };
 
-// Verificar que tenemos 16 fuentes
+// Verificar que tenemos 15 fuentes
 console.log(`📊 Total de fuentes configuradas: ${Object.keys(NEWS_SOURCES).length}`);
 
 // ============================================
@@ -380,7 +373,7 @@ function updateProgressBar(loaded, total, successful) {
     
     loadingElement.innerHTML = `
         <div class="spinner"></div>
-        <p>Cargando noticias de 16 fuentes de ciberseguridad...</p>
+        <p>Cargando noticias de 15 fuentes de ciberseguridad...</p>
         <div class="progress-bar-container">
             <div class="progress-bar" style="width: ${percentage}%"></div>
         </div>
@@ -415,8 +408,12 @@ async function loadAllNewsProgressive() {
     // Cargar SOLO desde Firestore
     if (window.NewsDB) {
         try {
-            console.log(`🔍 Consultando Firestore (mes actual)...`);
-            const recentNews = await NewsDB.getCurrentMonthNews();
+            // ============================================
+            // FILTRO: Mostrar noticias desde Diciembre 2025
+            // ============================================
+            const fromDate = new Date('2025-12-01T00:00:00Z'); // 1 de Diciembre 2025, 00:00 UTC
+            console.log('🔍 Consultando noticias desde Diciembre 2025...');
+            const recentNews = await NewsDB.getAllNews(fromDate);
             
             if (recentNews.length > 0) {
                 console.log(`✅ ${recentNews.length} noticias cargadas desde Firestore (INSTANTÁNEO)`);
@@ -445,12 +442,12 @@ async function loadAllNewsProgressive() {
 }
 
 /**
- * Carga noticias frescas desde las 16 fuentes RSS
+ * Carga noticias frescas desde las 15 fuentes RSS
  * @param {boolean} backgroundMode - Si es true, actualiza silenciosamente
  */
 async function loadFreshNewsFromRSS(backgroundMode = false) {
     if (!backgroundMode) {
-        console.log('📡 Cargando noticias desde 16 fuentes RSS...');
+        console.log('📡 Cargando noticias desde 15 fuentes RSS...');
     }
     
     // Verificar caché localStorage si no es modo background
@@ -1006,7 +1003,7 @@ function filterNewsByCategory(category) {
 // INICIALIZACIÓN
 // ============================================
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('✅ News Loader OPTIMIZADO v2.2 - 16 FUENTES inicializado');
+    console.log('✅ News Loader OPTIMIZADO v2.2 - 15 FUENTES inicializado');
     console.log(`📰 ${Object.keys(NEWS_SOURCES).length} fuentes configuradas`);
     console.log(`⚡ Timeout: ${PERFORMANCE_CONFIG.REQUEST_TIMEOUT / 1000}s | Reintentos: ${PERFORMANCE_CONFIG.MAX_RETRIES}`);
     
@@ -1019,4 +1016,4 @@ window.loadAllNews = loadAllNewsProgressive;
 window.clearNewsCache = clearCache;
 window.renderNews = renderNews;
 
-console.log('🚀 News Loader OPTIMIZADO v2.2 - 16 FUENTES cargado');
+console.log('🚀 News Loader OPTIMIZADO v2.2 - 15 FUENTES cargado');
