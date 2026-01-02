@@ -210,6 +210,12 @@ function clearSidebarFilters() {
     // Actualizar UI
     updateSidebarFilterUI(false);
     
+    // ✅ CORRECCIÓN: Reconstruir widget "Entradas Mensuales" con TODAS las noticias
+    if (window.renderDateArchiveWidget && window.unfilteredNewsData) {
+        console.log('🔄 Reconstruyendo widget de fechas con todas las noticias...');
+        window.renderDateArchiveWidget(window.unfilteredNewsData);
+    }
+    
     console.log('✅ Filtros limpiados');
 }
 
