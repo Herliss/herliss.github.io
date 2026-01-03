@@ -8,7 +8,7 @@
  * 
  * Autor: Herliss Briceño
  * Fecha: Diciembre 2024
- * Versión: 2.0 - Vista Integrada
+ * Versión: 2.1 - Con campo Source
  */
 
 'use strict';
@@ -79,6 +79,9 @@ function generateArticleHTML(article) {
     // Generar perfil de amenaza
     const threatProfile = generateThreatProfileHTML(article.threatProfile);
     
+    // Generar fuente original
+    const sourceHTML = generateSourceHTML(article.Source);
+    
     // Generar controles recomendados
     const controlsHTML = generateControlsHTML(article.recommendedControls);
     
@@ -136,6 +139,9 @@ function generateArticleHTML(article) {
             <div class="detail-summary">
                 ${article.content}
             </div>
+            
+            <!-- Fuente Original -->
+            ${sourceHTML}
             
             <!-- Controles Recomendados -->
             ${controlsHTML}
@@ -211,6 +217,37 @@ function generateThreatProfileHTML(threatProfile) {
         <div class="alert alert-warning" style="margin-top: 1.5rem;">
             <strong>⚠️ Perfil de Amenaza:</strong><br>
             ${badges.join('<br>')}
+        </div>
+    `;
+}
+
+// ============================================
+// GENERAR FUENTE ORIGINAL
+// ============================================
+
+function generateSourceHTML(source) {
+    if (!source) return '';
+    
+    // Extraer dominio para mostrar nombre legible
+    let displayName = source;
+    try {
+        const url = new URL(source);
+        displayName = url.hostname.replace('www.', '');
+    } catch (e) {
+        // Si no es una URL válida, usar el texto tal cual
+    }
+    
+    return `
+        <div class="alert alert-info" style="margin-top: 2rem; border-left: 4px solid #3498db;">
+            <strong>📌 Fuente Original del Análisis</strong><br>
+            <a href="${source}" target="_blank" rel="noopener noreferrer" style="color: #0066cc; font-weight: 600; text-decoration: none; display: inline-flex; align-items: center; gap: 0.5rem; margin-top: 0.5rem;">
+                ${displayName}
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                    <polyline points="15 3 21 3 21 9"></polyline>
+                    <line x1="10" y1="14" x2="21" y2="3"></line>
+                </svg>
+            </a>
         </div>
     `;
 }
@@ -340,4 +377,4 @@ window.closeArticleDetail = closeArticleDetail;
 // LOG DE INICIALIZACIÓN
 // ============================================
 
-console.log('✅ Articulo Viewer v2.0 (Vista Integrada) loaded');
+console.log('✅ Articulo Viewer v2.1 (Con Source) loaded');
