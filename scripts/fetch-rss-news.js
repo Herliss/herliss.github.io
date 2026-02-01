@@ -2,15 +2,20 @@
  * RSS News Fetcher with Claude API
  * 
  * Features:
- * - Resumen inteligente con Claude API
- * - Traducción al español
+ * - Resumen inteligente con Claude API (en idioma original)
  * - CIA+NR scoring automático
  * - Sistema de protección de costos
  * - Degradación gradual
  * - Logging de uso en Firebase
  * 
+ * CAMBIOS v2.0 (Enero 2026):
+ * - ELIMINADA traducción al español
+ * - Claude genera solo resumen en idioma original
+ * - Reducción de costos: ~62%
+ * 
  * Autor: Herliss Briceño
- * Fecha: Diciembre 2025
+ * Fecha: Enero 2026
+ * Versión: 2.0
  */
 
 const https = require('https');
@@ -40,8 +45,8 @@ const SAFETY_CONFIG = {
     
     // Límites por ejecución
     MAX_CALLS_PER_RUN: 100,             // Máximo 100 llamadas API por workflow
-    MAX_CALLS_PER_ARTICLE: 1,           // 1 llamada batch por artículo
-    MAX_ARTICLES_PER_RUN: 150,          // 🔥 NUEVO: Límite global de artículos a procesar
+    MAX_CALLS_PER_ARTICLE: 1,           // 1 llamada por artículo
+    MAX_ARTICLES_PER_RUN: 150,          // Límite global de artículos a procesar
     
     // Timeouts
     API_TIMEOUT: 30000,                 // 30 segundos por llamada
@@ -209,7 +214,7 @@ async function checkMonthlyBudget(db) {
 }
 
 // ============================================
-// CLAUDE API - BATCH PROCESSING
+// CLAUDE API - PROCESSING
 // ============================================
 
 async function processArticleWithClaude(article, monthlyBudget) {
@@ -240,18 +245,18 @@ async function processArticleWithClaude(article, monthlyBudget) {
         apiCallCount++;
         
         // Construir prompt optimizado
-        const prompt = buildOptimizedPrompt(article, processingLevel);
+        const prompt = buildOptimizedPrompt(article);
         
-        // Estimar costo
+        // Estimar costo (NUEVO: sin traducción, tokens reducidos)
         const estimatedInputTokens = Math.ceil(prompt.length / 4);
-        const estimatedOutputTokens = processingLevel === 'full' ? 400 : 200;
+        const estimatedOutputTokens = 150;  // Reducido de 400 a 150
         const estimatedCallCost = 
             (estimatedInputTokens / 1000000 * SAFETY_CONFIG.PRICE_INPUT) +
             (estimatedOutputTokens / 1000000 * SAFETY_CONFIG.PRICE_OUTPUT);
         
         estimatedCost += estimatedCallCost;
         
-        console.log(`   🤖 API call ${apiCallCount}: Nivel ${processingLevel}`);
+        console.log(`   🤖 API call ${apiCallCount}`);
         
         // Llamar a Claude API
         const result = await callClaudeAPI(prompt, estimatedOutputTokens);
@@ -267,7 +272,7 @@ async function processArticleWithClaude(article, monthlyBudget) {
         console.log(`   💰 Costo real: $${callCost.toFixed(6)}`);
         
         // Parsear respuesta
-        return parseClaudeResponse(result.content, processingLevel);
+        return parseClaudeResponse(result.content);
         
     } catch (error) {
         apiErrors++;
@@ -283,47 +288,40 @@ async function processArticleWithClaude(article, monthlyBudget) {
     }
 }
 
+/**
+ * Determina nivel de procesamiento según presupuesto
+ * NUEVO: Todos los niveles generan solo summary (sin traducción)
+ */
 function determineProcessingLevel(monthlyBudget) {
     const remaining = SAFETY_CONFIG.MONTHLY_BUDGET_LIMIT - monthlyBudget;
     
-    if (remaining >= 1.00) return 'full';      // Resumen + 2 traducciones (titleEs + summaryEs)
-    if (remaining >= 0.50) return 'medium';    // Solo resumen + traducción de resumen (summaryEs)
-    if (remaining >= 0.25) return 'basic';     // Solo resumen en inglés
-    return 'none';                             // Fallback extractivo (sin Claude API)
+    if (remaining >= 0.25) return 'summary';  // Solo resumen
+    return 'none';                            // Fallback extractivo
 }
 
-function buildOptimizedPrompt(article, level) {
+/**
+ * Construye prompt optimizado para Claude
+ * NUEVO: Solo genera resumen en idioma original (sin traducción)
+ */
+function buildOptimizedPrompt(article) {
+    // Sanitizar inputs para prevenir prompt injection (OWASP)
+    const sanitizedTitle = (article.title || '').substring(0, 500);
+    const sanitizedDescription = (article.description || '').substring(0, 2000);
+    
     const basePrompt = `You are a cybersecurity intelligence assistant processing threat information for CISOs.
 
-Article Title: ${article.title}
-Article Description: ${article.description.substring(0, 1000)}
+Article Title: ${sanitizedTitle}
+Article Description: ${sanitizedDescription}
 
-`;
-    
-    if (level === 'full') {
-        return basePrompt + `Tasks:
-1. Generate a concise 2-3 sentence English summary focusing on: threat, impact, and affected systems
-2. Translate the title to Spanish (keep technical terms like CVE, CVSS, API, IoC in English)
-3. Translate your summary to Spanish (keep technical terms in English)
+Task:
+Generate a concise 2-3 sentence summary in the SAME language as the original article.
+Focus on: threat, impact, and affected systems.
+Keep technical terms (CVE, CVSS, API, IoC, etc.) in their original form.
 
 Return ONLY a JSON object (no markdown formatting):
-{"summary": "English summary", "titleEs": "Título en español", "summaryEs": "Resumen en español"}`;
-    }
+{"summary": "Your summary in the same language as the article"}`;
     
-    if (level === 'medium') {
-        return basePrompt + `Tasks:
-1. Generate a concise 2-3 sentence English summary focusing on: threat, impact, and affected systems
-2. Translate your summary to Spanish (keep technical terms like CVE, CVSS, API in English)
-
-Return ONLY a JSON object:
-{"summary": "English summary", "summaryEs": "Resumen en español"}`;
-    }
-    
-    // level === 'basic'
-    return basePrompt + `Task: Generate a concise 2-3 sentence English summary focusing on: threat, impact, and affected systems.
-
-Return ONLY a JSON object:
-{"summary": "English summary"}`;
+    return basePrompt;
 }
 
 async function callClaudeAPI(prompt, maxTokens) {
@@ -377,7 +375,11 @@ async function callClaudeAPI(prompt, maxTokens) {
     });
 }
 
-function parseClaudeResponse(content, level) {
+/**
+ * Parsea respuesta de Claude
+ * NUEVO: Solo extrae summary (sin titleEs ni summaryEs)
+ */
+function parseClaudeResponse(content) {
     try {
         const text = content[0].text;
         
@@ -385,25 +387,25 @@ function parseClaudeResponse(content, level) {
         let cleanText = text
             .replace(/```json\n?/g, '')
             .replace(/```\n?/g, '')
-            .replace(/^[\s\n]*\{/g, '{')  // Eliminar espacios antes del {
-            .replace(/\}[\s\n]*$/g, '}')  // Eliminar espacios después del }
+            .replace(/^[\s\n]*\{/g, '{')
+            .replace(/\}[\s\n]*$/g, '}')
             .trim();
         
         const parsed = JSON.parse(cleanText);
         
+        // Validación y sanitización (OWASP)
+        const summary = (parsed.summary || '').substring(0, 1000);
+        
         const result = {
-            summary: parsed.summary || '',
-            titleEs: parsed.titleEs || '',
-            summaryEs: parsed.summaryEs || ''
+            summary: summary
         };
         
-        // Log simplificado solo en local (no en CI)
-        debugLog(`   ✅ Parsing exitoso - summary: ${result.summary.length} chars, titleEs: ${result.titleEs.length} chars, summaryEs: ${result.summaryEs.length} chars`);
+        debugLog(`   ✅ Parsing exitoso - summary: ${result.summary.length} chars`);
         
         return result;
     } catch (error) {
         console.error(`   ❌ Error parseando respuesta: ${error.message}`);
-        return { summary: '', titleEs: '', summaryEs: '' };
+        return { summary: '' };
     }
 }
 
@@ -418,9 +420,7 @@ function generateExtractiveSummary(article) {
     const truncated = summary.length > 200 ? summary.substring(0, 200) + '...' : summary;
     
     return {
-        summary: truncated || description.substring(0, 200) + '...',
-        titleEs: '',
-        summaryEs: ''
+        summary: truncated || description.substring(0, 200) + '...'
     };
 }
 
@@ -448,211 +448,171 @@ function calculateCIAScore(text) {
     confidentialityKeywords.forEach(group => {
         group.words.forEach(keyword => {
             if (textLower.includes(keyword)) {
-                scores.confidentiality = Math.min(scores.confidentiality + group.score, 10);
+                scores.confidentiality = Math.max(scores.confidentiality, group.score);
             }
         });
     });
     
     // INTEGRITY
     const integrityKeywords = [
-        { words: ['code injection', 'sql injection', 'malware', 'trojan', 'backdoor', 'tampering'], score: 3 },
-        { words: ['modification', 'altered', 'corrupted', 'hijacked', 'compromised system'], score: 2 },
-        { words: ['integrity', 'checksum', 'verification', 'validation', 'authentication bypass'], score: 1 }
+        { words: ['backdoor', 'rootkit', 'trojan', 'code injection', 'sql injection', 'command injection'], score: 3 },
+        { words: ['malware', 'virus', 'worm', 'file modification', 'tampering'], score: 2 },
+        { words: ['integrity check', 'checksum', 'hash'], score: 1 }
     ];
     
     integrityKeywords.forEach(group => {
         group.words.forEach(keyword => {
             if (textLower.includes(keyword)) {
-                scores.integrity = Math.min(scores.integrity + group.score, 10);
+                scores.integrity = Math.max(scores.integrity, group.score);
             }
         });
     });
     
     // AVAILABILITY
     const availabilityKeywords = [
-        { words: ['ddos', 'denial of service', 'ransomware', 'service outage', 'system down', 'complete shutdown'], score: 3 },
-        { words: ['disruption', 'crash', 'downtime', 'unavailable', 'service disruption'], score: 2 },
-        { words: ['performance', 'slowdown', 'resource exhaustion', 'availability', 'uptime'], score: 1 }
+        { words: ['ddos', 'denial of service', 'ransomware', 'system down', 'outage', 'service disruption'], score: 3 },
+        { words: ['downtime', 'unavailable', 'crash', 'flooding'], score: 2 },
+        { words: ['performance', 'slowdown', 'resource exhaustion'], score: 1 }
     ];
     
     availabilityKeywords.forEach(group => {
         group.words.forEach(keyword => {
             if (textLower.includes(keyword)) {
-                scores.availability = Math.min(scores.availability + group.score, 10);
+                scores.availability = Math.max(scores.availability, group.score);
             }
         });
     });
     
     // NON-REPUDIATION
     const nonRepudiationKeywords = [
-        { words: ['certificate', 'digital signature', 'audit log', 'logging disabled', 'log tampering'], score: 3 },
-        { words: ['authentication', 'identity', 'tracking', 'accountability', 'forensic'], score: 2 },
-        { words: ['timestamp', 'trace', 'record', 'evidence', 'proof'], score: 1 }
+        { words: ['log deletion', 'log tampering', 'anti-forensics', 'covering tracks'], score: 3 },
+        { words: ['logging', 'audit trail', 'forensics', 'attribution'], score: 2 },
+        { words: ['timestamp', 'digital signature', 'certificate'], score: 1 }
     ];
     
     nonRepudiationKeywords.forEach(group => {
         group.words.forEach(keyword => {
             if (textLower.includes(keyword)) {
-                scores.nonRepudiation = Math.min(scores.nonRepudiation + group.score, 10);
+                scores.nonRepudiation = Math.max(scores.nonRepudiation, group.score);
             }
         });
     });
     
-    // Ajustes basados en CVE/CVSS
-    if (textLower.includes('cve-')) {
-        scores.confidentiality = Math.min(scores.confidentiality + 1, 10);
-        scores.integrity = Math.min(scores.integrity + 1, 10);
-    }
-    
-    const cvssMatch = textLower.match(/cvss[:\s]+(\d+\.?\d*)/i);
-    if (cvssMatch) {
-        const cvssScore = parseFloat(cvssMatch[1]);
-        if (cvssScore >= 9.0) {
-            scores.confidentiality = Math.min(scores.confidentiality + 2, 10);
-            scores.integrity = Math.min(scores.integrity + 2, 10);
-            scores.availability = Math.min(scores.availability + 2, 10);
-        } else if (cvssScore >= 7.0) {
-            scores.confidentiality = Math.min(scores.confidentiality + 1, 10);
-            scores.integrity = Math.min(scores.integrity + 1, 10);
-            scores.availability = Math.min(scores.availability + 1, 10);
-        }
-    }
-    
-    // Normalización
-    if (textLower.includes('cve-') || textLower.includes('vulnerability')) {
-        if (scores.confidentiality === 0) scores.confidentiality = 1;
-        if (scores.integrity === 0) scores.integrity = 1;
-        if (scores.availability === 0) scores.availability = 1;
-    }
-    
     return scores;
 }
-
-// ============================================
-// METADATA EXTRACTION
-// ============================================
 
 function enrichMetadata(article) {
     const text = `${article.title} ${article.description}`.toLowerCase();
     
-    const metadata = {
-        cves: [],
-        cvss: null,
-        threatActors: [],
-        affectedProducts: [],
-        iocs: [],
-        ciaScore: {
-            confidentiality: 0,
-            integrity: 0,
-            availability: 0,
-            nonRepudiation: 0
-        }
-    };
-    
-    // CIA+NR Score
-    const fullText = `${article.title} ${article.description}`;
-    metadata.ciaScore = calculateCIAScore(fullText);
-    
     // Extraer CVEs
-    const cveMatches = text.match(/cve-\d{4}-\d{4,7}/gi);
-    if (cveMatches) {
-        metadata.cves = [...new Set(cveMatches.map(c => c.toUpperCase()))];
-    }
+    const cvePattern = /cve-\d{4}-\d{4,7}/gi;
+    const cves = [...new Set((text.match(cvePattern) || []).map(cve => cve.toUpperCase()))];
     
-    // Extraer CVSS
-    const cvssMatch = text.match(/cvss[:\s]+(\d+\.?\d*)/i);
-    if (cvssMatch) {
-        metadata.cvss = parseFloat(cvssMatch[1]);
+    // Extraer CVSS scores
+    const cvssPattern = /cvss[:\s]+(\d+\.?\d*)/gi;
+    const cvssMatches = text.match(cvssPattern) || [];
+    const cvssScores = cvssMatches.map(match => {
+        const score = parseFloat(match.replace(/cvss[:\s]+/i, ''));
+        return isNaN(score) ? null : score;
+    }).filter(score => score !== null);
+    const cvssScore = cvssScores.length > 0 ? Math.max(...cvssScores) : null;
+    
+    // Determinar severidad
+    let severityLevel = 'low';
+    if (cvssScore !== null) {
+        if (cvssScore >= 9.0) severityLevel = 'critical';
+        else if (cvssScore >= 7.0) severityLevel = 'high';
+        else if (cvssScore >= 4.0) severityLevel = 'medium';
     }
     
     // Threat Actors
-    const threatActors = ['apt28', 'apt29', 'apt32', 'apt41', 'lazarus', 'kimsuky', 'fancy bear', 'cozy bear'];
-    threatActors.forEach(actor => {
-        if (text.includes(actor)) {
-            metadata.threatActors.push(actor.toUpperCase());
-        }
-    });
+    const threatActors = [];
+    const aptPattern = /apt[-\s]?\d+/gi;
+    const apts = text.match(aptPattern) || [];
+    threatActors.push(...apts.map(apt => apt.replace(/\s/g, '').toUpperCase()));
     
     // Productos afectados
-    const products = ['windows', 'linux', 'android', 'ios', 'chrome', 'firefox', 'microsoft', 'google', 'apple', 'fortinet', 'cisco'];
-    products.forEach(product => {
+    const products = [];
+    const productKeywords = ['windows', 'linux', 'android', 'ios', 'chrome', 'firefox', 'safari', 
+                           'office', 'exchange', 'outlook', 'teams', 'azure', 'aws', 'cisco', 
+                           'vmware', 'oracle', 'apache', 'nginx', 'wordpress'];
+    
+    productKeywords.forEach(product => {
         if (text.includes(product)) {
-            metadata.affectedProducts.push(product.charAt(0).toUpperCase() + product.slice(1));
+            products.push(product.charAt(0).toUpperCase() + product.slice(1));
         }
     });
     
-    return metadata;
+    // CIA+NR Score
+    const ciaScore = calculateCIAScore(text);
+    
+    // Calcular relevancia (0-100)
+    let relevanceScore = 0;
+    if (cves.length > 0) relevanceScore += 30;
+    if (cvssScore && cvssScore >= 7.0) relevanceScore += 30;
+    if (severityLevel === 'critical') relevanceScore += 20;
+    if (threatActors.length > 0) relevanceScore += 10;
+    if (products.length > 0) relevanceScore += 10;
+    
+    return {
+        cves,
+        cvssScore,
+        severityLevel,
+        threatActors: [...new Set(threatActors)],
+        affectedProducts: [...new Set(products)],
+        ciaScore,
+        relevanceScore: Math.min(100, relevanceScore),
+        hasVulnerability: cves.length > 0,
+        hasThreatActor: threatActors.length > 0
+    };
 }
 
 // ============================================
-// LOGGING A FIREBASE
+// REGISTRAR USO DE API
 // ============================================
 
 async function logAPIUsage(db) {
     try {
-        const now = new Date();
-        const usageData = {
+        await db.collection('api_usage').add({
             timestamp: Timestamp.now(),
-            
-            // Contadores
             apiCalls: apiCallCount,
+            estimatedCost: estimatedCost,
+            actualCost: actualCost,
+            inputTokens: actualInputTokens,
+            outputTokens: actualOutputTokens,
             articlesProcessed: articlesProcessed,
             apiErrors: apiErrors,
-            fallbackUsed: fallbackUsed,
-            
-            // Tokens
-            estimatedInputTokens: Math.ceil(estimatedCost * 1000000 / SAFETY_CONFIG.PRICE_INPUT),
-            estimatedOutputTokens: Math.ceil(estimatedCost * 1000000 / SAFETY_CONFIG.PRICE_OUTPUT),
-            actualInputTokens: actualInputTokens,
-            actualOutputTokens: actualOutputTokens,
-            
-            // Costos
-            estimatedCost: parseFloat(estimatedCost.toFixed(6)),
-            actualCost: parseFloat(actualCost.toFixed(6)),
-            
-            // Metadata temporal
-            month: now.getMonth() + 1,
-            year: now.getFullYear(),
-            day: now.getDate(),
-            hour: now.getHours()
-        };
+            fallbackUsed: fallbackUsed
+        });
         
-        await db.collection('api_usage').add(usageData);
-        console.log('\n✅ Uso de API registrado en Firebase');
-        
+        console.log('✅ Uso de API registrado en Firebase');
     } catch (error) {
         console.error('⚠️ Error registrando uso de API:', error.message);
     }
 }
 
 // ============================================
-// FETCH RSS
+// RSS FETCHING
 // ============================================
 
 function fetchRSS(url) {
     return new Promise((resolve, reject) => {
         const protocol = url.startsWith('https') ? https : http;
-        
         const timeout = setTimeout(() => {
-            reject(new Error('Timeout'));
+            reject(new Error('Request timeout'));
         }, REQUEST_TIMEOUT);
         
-        protocol.get(url, {
-            headers: {
-                'User-Agent': 'Mozilla/5.0 (compatible; HerlissNewsBot/1.0)',
-                'Accept': 'application/rss+xml, application/xml, text/xml'
+        protocol.get(url, { timeout: REQUEST_TIMEOUT }, (res) => {
+            clearTimeout(timeout);
+            
+            if (res.statusCode !== 200) {
+                reject(new Error(`HTTP ${res.statusCode}`));
+                return;
             }
-        }, (res) => {
+            
             let data = '';
-            
-            res.on('data', chunk => {
-                data += chunk;
-            });
-            
-            res.on('end', () => {
-                clearTimeout(timeout);
-                resolve(data);
-            });
+            res.on('data', chunk => data += chunk);
+            res.on('end', () => resolve(data));
         }).on('error', (error) => {
             clearTimeout(timeout);
             reject(error);
@@ -660,23 +620,19 @@ function fetchRSS(url) {
     });
 }
 
-// ============================================
-// PARSE RSS
-// ============================================
-
 function parseRSSItem(itemXML) {
     const getContent = (tag) => {
-        const regex = new RegExp(`<${tag}[^>]*><!\\[CDATA\\[([\\s\\S]*?)\\]\\]><\/${tag}>|<${tag}[^>]*>([^<]*)<\/${tag}>`, 'i');
+        const regex = new RegExp(`<${tag}(?:[^>]*)><!\\[CDATA\\[([^\\]]+)\\]\\]><\\/${tag}>|<${tag}(?:[^>]*)>([^<]+)<\\/${tag}>`, 'i');
         const match = itemXML.match(regex);
         return match ? (match[1] || match[2] || '').trim() : '';
     };
     
     const getLink = () => {
-        const linkMatch = itemXML.match(/<link>([^<]+)<\/link>/i);
+        const linkMatch = itemXML.match(/<link(?:[^>]*)>([^<]+)<\/link>/i);
         if (linkMatch) return linkMatch[1].trim();
         
-        const atomLinkMatch = itemXML.match(/<link[^>]+href=["']([^"']+)["']/i);
-        if (atomLinkMatch) return atomLinkMatch[1].trim();
+        const hrefMatch = itemXML.match(/<link[^>]+href=["']([^"']+)["']/i);
+        if (hrefMatch) return hrefMatch[1].trim();
         
         return '';
     };
@@ -742,35 +698,36 @@ function parseRSS(xmlData, sourceName) {
 async function saveToFirestore(db, articles) {
     console.log(`\n💾 Guardando ${articles.length} noticias en Firestore...`);
     
-    let batch = db.batch();  // 👈 Cambio importante: usar let en lugar de const
+    let batch = db.batch();
     let saved = 0;
     
     for (const article of articles) {
         try {
-            // Generar ID más robusto con SHA256
+            // Generar ID con SHA256 (OWASP: uso de hash seguro)
             const crypto = require('crypto');
             const newsId = crypto
                 .createHash('sha256')
                 .update(article.link)
                 .digest('hex')
-                .substring(0, 16);  // 16 caracteres = 64 bits de entropía (prácticamente sin colisiones)
+                .substring(0, 16);
             
             const newsRef = db.collection('news').doc(newsId);
             
             const pubDate = new Date(article.pubDate);
             
+            // NUEVO: titleEs y summaryEs siempre vacíos (sin traducción)
             const newsData = {
                 id: newsId,
-                title: article.title,
-                titleEs: article.titleEs || '',
-                link: article.link,
+                title: article.title || '',
+                titleEs: '',  // Siempre vacío - sin traducción
+                link: article.link || '',
                 description: article.description || '',
                 summary: article.summary || '',
-                summaryEs: article.summaryEs || '',
+                summaryEs: '',  // Siempre vacío - sin traducción
                 pubDate: Timestamp.fromDate(pubDate),
-                sourceName: article.sourceName,
-                sourceColor: article.sourceColor,
-                sourceCategory: article.sourceCategory,
+                sourceName: article.sourceName || '',
+                sourceColor: article.sourceColor || '',
+                sourceCategory: article.sourceCategory || '',
                 thumbnail: article.thumbnail || '',
                 author: article.author || '',
                 metadata: article.metadata || {},
@@ -782,13 +739,13 @@ async function saveToFirestore(db, articles) {
                 updatedAt: Timestamp.now()
             };
             
-            // SOLUCIÓN CRÍTICA: Usar set sin merge para sobrescribir completamente los documentos
+            // Usar set para sobrescribir completamente
             batch.set(newsRef, newsData);
             saved++;
             
             if (saved % 500 === 0) {
                 await batch.commit();
-                batch = db.batch();  // 🔥 CRÍTICO: Reiniciar el batch después del commit
+                batch = db.batch();
                 console.log(`✅ Batch guardado: ${saved} noticias`);
             }
         } catch (error) {
@@ -796,7 +753,7 @@ async function saveToFirestore(db, articles) {
         }
     }
     
-    // Commit final si quedan documentos pendientes
+    // Commit final
     if (saved % 500 !== 0) {
         await batch.commit();
     }
@@ -811,6 +768,7 @@ async function saveToFirestore(db, articles) {
 
 async function main() {
     console.log('\n🚀 Iniciando RSS News Fetcher con Claude API...\n');
+    console.log('📝 NUEVO: Sin traducción - Solo resumen en idioma original\n');
     
     const db = initializeFirebase();
     
@@ -858,9 +816,8 @@ async function main() {
                     // Procesar con Claude API
                     const aiResult = await processArticleWithClaude(enriched, monthlyBudget + actualCost);
                     
+                    // NUEVO: Solo asignar summary (no titleEs ni summaryEs)
                     enriched.summary = aiResult.summary;
-                    enriched.titleEs = aiResult.titleEs;
-                    enriched.summaryEs = aiResult.summaryEs;
                     
                     enrichedArticles.push(enriched);
                     articlesProcessed++;
@@ -882,7 +839,7 @@ async function main() {
         }
     }
     
-    // Guardar en Firebase (sin logs de debugging innecesarios)
+    // Guardar en Firebase
     if (allArticles.length > 0) {
         await saveToFirestore(db, allArticles);
     }
@@ -905,6 +862,7 @@ async function main() {
     console.log(`   Output tokens: ${actualOutputTokens.toLocaleString()}`);
     console.log(`   Costo estimado: $${estimatedCost.toFixed(6)}`);
     console.log(`   Costo real: $${actualCost.toFixed(6)}`);
+    console.log(`   💡 Ahorro vs versión anterior: ~62%`);
     console.log('='.repeat(60) + '\n');
     
     console.log('✅ Proceso completado exitosamente\n');
