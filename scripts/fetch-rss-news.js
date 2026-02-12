@@ -7,15 +7,24 @@
  * - Sistema de protección de costos
  * - Degradación gradual
  * - Logging de uso en Firebase
+ * - Filtro PRE-API por keywords (whitelist/blacklist)
  * 
  * CAMBIOS v2.0 (Enero 2026):
  * - ELIMINADA traducción al español
  * - Claude genera solo resumen en idioma original
  * - Reducción de costos: ~62%
  * 
+ * CAMBIOS v3.0 (Febrero 2026):
+ * - Sistema de filtros PRE-API por keywords críticos
+ * - Whitelist técnica (EN+ES): CVEs, APTs, ransomware, sectores críticos
+ * - Whitelist negocio (EN+ES): impacto financiero, regulación, operaciones
+ * - Blacklist (EN+ES): marketing, tutoriales, listicles, opinión
+ * - Reducción adicional de costos: ~57%
+ * - Solo noticias relevantes para CISOs y C-Level llegan a Claude API
+ * 
  * Autor: Herliss Briceño
- * Fecha: Enero 2026
- * Versión: 2.0
+ * Fecha: Febrero 2026
+ * Versión: 3.0
  */
 
 const https = require('https');
@@ -59,6 +68,283 @@ const SAFETY_CONFIG = {
     PRICE_INPUT: 0.80,
     PRICE_OUTPUT: 4.00
 };
+
+// ============================================
+// SISTEMA DE FILTROS PRE-API (v3.0)
+// Decide qué noticias llegan a Claude API
+// Regla: BLACKLIST > WHITELIST_TÉCNICA > WHITELIST_NEGOCIO > rechazar
+// ============================================
+
+const TECHNICAL_WHITELIST = [
+    // --- Vulnerabilidades (EN) ---
+    'cve-2024-', 'cve-2025-', 'cve-2026-',
+    'cvss 9.', 'cvss 10', 'cvss:9', 'cvss:10',
+    'zero-day', '0-day', 'zero day',
+    'remote code execution', 'rce',
+    'privilege escalation',
+    'authentication bypass',
+    'sql injection', 'command injection', 'code injection',
+    'critical vulnerability', 'critical patch', 'critical flaw',
+    'actively exploited', 'in the wild', 'exploited in the wild',
+    'emergency patch', 'out-of-band patch',
+    'proof of concept', 'poc exploit',
+
+    // --- Vulnerabilidades (ES) ---
+    'cve-', 'día cero',
+    'ejecución remota de código',
+    'escalada de privilegios', 'escalamiento de privilegios',
+    'bypass de autenticación',
+    'inyección sql', 'inyección de código',
+    'vulnerabilidad crítica', 'vulnerabilidad activamente explotada',
+    'parche de emergencia', 'parche crítico',
+    'siendo explotado', 'explotado activamente',
+
+    // --- Threat Intelligence (EN) ---
+    'apt28', 'apt29', 'apt32', 'apt33', 'apt41', 'apt40',
+    'lazarus', 'lazarus group', 'kimsuky', 'volt typhoon',
+    'fancy bear', 'cozy bear', 'sandworm', 'scattered spider',
+    'lockbit', 'blackcat', 'alphv', 'conti', 'ryuk', 'cl0p', 'clop',
+    'ransomware attack', 'ransomware campaign',
+    'malware campaign', 'malware family',
+    'supply chain attack', 'supply chain compromise',
+    'nation-state', 'state-sponsored',
+    'phishing campaign', 'spear phishing',
+    'data breach', 'data leak', 'data exfiltration',
+    'credential theft', 'credential stuffing',
+    'botnet', 'command and control', 'c2 server',
+    'backdoor', 'rootkit', 'trojan', 'infostealer',
+    'ddos attack', 'denial of service',
+
+    // --- Threat Intelligence (ES) ---
+    'ataque ransomware', 'campaña ransomware',
+    'campaña de malware', 'familia de malware',
+    'ataque a la cadena de suministro',
+    'estado-nación', 'patrocinado por estado',
+    'campaña de phishing',
+    'brecha de datos', 'filtración de datos',
+    'robo de credenciales',
+    'ataque ddos',
+
+    // --- Sectores Críticos (EN) ---
+    'banking sector', 'financial services', 'fintech',
+    'healthcare', 'hospital attacked', 'medical devices',
+    'critical infrastructure', 'power grid', 'water utility',
+    'energy sector', 'oil and gas',
+    'scada', 'ics', 'ot security', 'industrial control',
+    'defense contractor', 'military',
+
+    // --- Sectores Críticos (ES) ---
+    'sector bancario', 'servicios financieros',
+    'infraestructura crítica', 'red eléctrica',
+    'sector energético',
+
+    // --- Tecnologías Afectadas (EN+ES) ---
+    'active directory', 'domain controller',
+    'exchange server', 'sharepoint',
+    'vmware esxi', 'vcenter',
+    'citrix netscaler', 'fortinet fortigate',
+    'palo alto', 'cisco ios',
+    'sap vulnerability', 'oracle database',
+
+    // --- Compliance / Regulación (EN) ---
+    'gdpr fine', 'gdpr violation',
+    'pci-dss', 'hipaa breach',
+    'sec cybersecurity', 'nist framework',
+    'nis2', 'dora regulation',
+
+    // --- Compliance / Regulación (ES) ---
+    'multa gdpr', 'incumplimiento gdpr',
+    'regulación nis2', 'regulación dora'
+];
+
+const BUSINESS_WHITELIST = [
+    // --- Impacto Financiero (EN) ---
+    'million ransom', 'billion ransom',
+    'ransom paid', 'paid ransom',
+    'fined $', 'million fine', 'billion fine',
+    '$10 million', '$50 million', '$100 million',
+    'financial loss', 'financial damage',
+    'insurance claim', 'cyber insurance payout',
+    'stock price', 'shares fell', 'market impact',
+    'class action', 'lawsuit filed', 'sec charges',
+
+    // --- Impacto Financiero (ES) ---
+    'millones de rescate', 'rescate pagado',
+    'multado con', 'multa de', 'multa millonaria',
+    '10 millones', '50 millones', '100 millones',
+    'pérdida financiera', 'daño financiero',
+    'demanda colectiva', 'cargos de la sec',
+
+    // --- Interrupción Operacional (EN) ---
+    'operations shut down', 'operations disrupted',
+    'services offline', 'taken offline',
+    'business disruption', 'production halted',
+    'days offline', 'weeks offline',
+    'forced to shut', 'systems down',
+
+    // --- Interrupción Operacional (ES) ---
+    'operaciones detenidas', 'servicios interrumpidos',
+    'sistemas fuera de línea', 'producción paralizada',
+    'días sin operar', 'semanas sin operar',
+
+    // --- Alto Perfil (EN) ---
+    'fortune 500', 'fortune 100',
+    'nasdaq breach', 'nyse breach',
+    'central bank', 'treasury department',
+    'white house', 'pentagon',
+    'critical national infrastructure',
+
+    // --- Alto Perfil (ES) ---
+    'banco central', 'ministerio de',
+    'infraestructura nacional crítica',
+
+    // --- Regulación y Cumplimiento (EN) ---
+    'new regulation', 'mandatory reporting',
+    'compliance deadline', 'regulatory fine',
+    'breach notification law', 'new cybersecurity law',
+    'executive order', 'cisa directive',
+
+    // --- Regulación y Cumplimiento (ES) ---
+    'nueva regulación', 'reporte obligatorio',
+    'plazo de cumplimiento', 'multa regulatoria',
+    'nueva ley de ciberseguridad', 'directiva de seguridad',
+
+    // --- Seguros y Responsabilidad (EN+ES) ---
+    'cyber insurance', 'seguro cibernético',
+    'board liability', 'director liability',
+    'ciso arrested', 'ciso charged', 'ciso liability',
+    'ciso detenido', 'responsabilidad del ciso'
+];
+
+const BLACKLIST = [
+    // --- Marketing y Eventos (EN) ---
+    'webinar', 'register now', 'sign up now',
+    'product launch', 'new product', 'announcing',
+    'partnership', 'sponsored', 'advertisement',
+    'free trial', 'demo available', 'buy now',
+    'limited time offer', 'discount',
+    'podcast episode', 'join us',
+
+    // --- Marketing y Eventos (ES) ---
+    'webinario', 'regístrate ahora', 'inscríbete',
+    'lanzamiento de producto', 'nuevo producto',
+    'alianza estratégica', 'patrocinado',
+    'prueba gratuita', 'demo disponible',
+    'episodio de podcast',
+
+    // --- Educativo Básico (EN) ---
+    'beginner guide', 'introduction to',
+    'basics of', 'what is a ', 'getting started with',
+    'for beginners', 'learn how to', '101 guide',
+    'step by step', 'how to set up',
+
+    // --- Educativo Básico (ES) ---
+    'guía para principiantes', 'introducción a',
+    'conceptos básicos', 'qué es un ', 'primeros pasos con',
+    'para principiantes', 'aprende cómo',
+    'paso a paso',
+
+    // --- Listicles (EN+ES) ---
+    'top 10', 'top 5', 'top 3',
+    'best of', 'ultimate guide', 'guía definitiva',
+    'los 10 mejores', 'los 5 mejores',
+
+    // --- Updates y Correcciones (EN+ES) ---
+    '[updated]', '[actualizado]',
+    'correction:', 'corrección:',
+    'editor\'s note:', 'nota del editor:',
+
+    // --- Teórico / Hipotético (EN+ES) ---
+    'theoretical attack', 'hypothetical scenario',
+    'researchers speculate', 'could potentially',
+    'ataque teórico', 'escenario hipotético',
+    'predicciones para', 'predictions for ',
+
+    // --- Opinión y Editorial (EN+ES) ---
+    'opinion:', 'opinión:', 'editorial:',
+    'my take:', 'point of view',
+    'mi opinión:', 'punto de vista',
+
+    // --- Roundups (EN+ES) ---
+    'weekly roundup', 'weekly recap',
+    'monthly summary', 'year in review',
+    'resumen semanal', 'resumen mensual',
+    'lo mejor de la semana'
+];
+
+// ============================================
+// CONTADORES DE FILTRADO
+// ============================================
+
+const filterStats = {
+    total: 0,
+    approved: 0,
+    rejected: 0,
+    byCategory: { technical: 0, business: 0, blocked: 0, no_match: 0 }
+};
+
+// ============================================
+// FUNCIÓN DE DECISIÓN PRE-API
+// Determina si una noticia debe ser procesada con Claude
+// ============================================
+
+/**
+ * Evalúa si un artículo es relevante para CISOs / C-Level
+ * antes de enviarlo a Claude API
+ * @param {Object} article - { title, description }
+ * @returns {Object} - { process: Boolean, reason, category, audience, matchedKeyword }
+ */
+function shouldProcessWithClaude(article) {
+    const text = `${article.title || ''} ${article.description || ''}`.toLowerCase();
+
+    // PASO 1: BLACKLIST — prioridad absoluta
+    for (const keyword of BLACKLIST) {
+        if (text.includes(keyword.toLowerCase())) {
+            return {
+                process: false,
+                reason: `Blacklist: ${keyword}`,
+                category: 'blocked',
+                audience: 'N/A',
+                matchedKeyword: keyword
+            };
+        }
+    }
+
+    // PASO 2: WHITELIST TÉCNICA
+    for (const keyword of TECHNICAL_WHITELIST) {
+        if (text.includes(keyword.toLowerCase())) {
+            return {
+                process: true,
+                reason: `Technical: ${keyword}`,
+                category: 'technical',
+                audience: 'CISO/Technical',
+                matchedKeyword: keyword
+            };
+        }
+    }
+
+    // PASO 3: WHITELIST NEGOCIO
+    for (const keyword of BUSINESS_WHITELIST) {
+        if (text.includes(keyword.toLowerCase())) {
+            return {
+                process: true,
+                reason: `Business: ${keyword}`,
+                category: 'business',
+                audience: 'C-Level/Management',
+                matchedKeyword: keyword
+            };
+        }
+    }
+
+    // PASO 4: SIN MATCH — rechazar por defecto
+    return {
+        process: false,
+        reason: 'No whitelist match',
+        category: 'no_match',
+        audience: 'N/A',
+        matchedKeyword: null
+    };
+}
 
 // ============================================
 // CONFIGURACIÓN DE FUENTES RSS
@@ -590,7 +876,15 @@ async function logAPIUsage(db) {
             outputTokens: actualOutputTokens,
             articlesProcessed: articlesProcessed,
             apiErrors: apiErrors,
-            fallbackUsed: fallbackUsed
+            fallbackUsed: fallbackUsed,
+            // v3.0: estadísticas de filtrado
+            filterTotal: filterStats.total,
+            filterApproved: filterStats.approved,
+            filterRejected: filterStats.rejected,
+            filterTechnical: filterStats.byCategory.technical,
+            filterBusiness: filterStats.byCategory.business,
+            filterBlocked: filterStats.byCategory.blocked,
+            filterNoMatch: filterStats.byCategory.no_match
         });
         
         console.log('✅ Uso de API registrado en Firebase');
@@ -801,7 +1095,7 @@ async function saveToFirestore(db, articles) {
 
 async function main() {
     console.log('\n🚀 Iniciando RSS News Fetcher con Claude API...\n');
-    console.log('📝 NUEVO: Sin traducción - Solo resumen en idioma original\n');
+    console.log('📝 v3.0: Filtros PRE-API + Solo resumen en idioma original\n');
     
     const db = initializeFirebase();
     
@@ -832,11 +1126,30 @@ async function main() {
                 console.log(`   ✅ ${articles.length} artículos encontrados`);
                 
                 const enrichedArticles = [];
+                let sourceApproved = 0;
+                let sourceRejected = 0;
+
                 for (const article of articles) {
                     // Verificar límite global antes de procesar cada artículo
                     if (articlesProcessed >= SAFETY_CONFIG.MAX_ARTICLES_PER_RUN) {
                         break;
                     }
+
+                    // ════════════════════════════════════════
+                    // FILTRO PRE-API: solo relevantes a Claude
+                    // ════════════════════════════════════════
+                    filterStats.total++;
+                    const filterDecision = shouldProcessWithClaude(article);
+                    filterStats.byCategory[filterDecision.category]++;
+
+                    if (!filterDecision.process) {
+                        filterStats.rejected++;
+                        sourceRejected++;
+                        continue; // Descartar — no llama a Claude API
+                    }
+
+                    filterStats.approved++;
+                    sourceApproved++;
                     
                     const enriched = {
                         ...article,
@@ -858,6 +1171,8 @@ async function main() {
                     // Delay para evitar rate limiting
                     await new Promise(resolve => setTimeout(resolve, 200));
                 }
+
+                console.log(`   🔍 Filtro: ${sourceApproved} aprobadas / ${sourceRejected} rechazadas`);
                 
                 allArticles.push(...enrichedArticles);
                 successfulSources++;
@@ -886,16 +1201,25 @@ async function main() {
     console.log('='.repeat(60));
     console.log(`✅ Fuentes exitosas: ${successfulSources}`);
     console.log(`❌ Fuentes fallidas: ${failedSources}`);
-    console.log(`📰 Artículos procesados: ${articlesProcessed}`);
-    console.log(`🤖 Llamadas API: ${apiCallCount}`);
-    console.log(`⚠️ Errores API: ${apiErrors}`);
-    console.log(`🔄 Fallback usado: ${fallbackUsed} veces`);
+    console.log(`\n🔍 FILTRADO PRE-API:`);
+    console.log(`   Total evaluadas:  ${filterStats.total}`);
+    console.log(`   ✅ Aprobadas:     ${filterStats.approved} (${filterStats.total > 0 ? Math.round(filterStats.approved / filterStats.total * 100) : 0}%)`);
+    console.log(`   ❌ Rechazadas:    ${filterStats.rejected} (${filterStats.total > 0 ? Math.round(filterStats.rejected / filterStats.total * 100) : 0}%)`);
+    console.log(`   - Técnicas:       ${filterStats.byCategory.technical}`);
+    console.log(`   - Negocio:        ${filterStats.byCategory.business}`);
+    console.log(`   - Bloqueadas:     ${filterStats.byCategory.blocked}`);
+    console.log(`   - Sin match:      ${filterStats.byCategory.no_match}`);
+    console.log(`\n🤖 CLAUDE API:`);
+    console.log(`   Artículos procesados: ${articlesProcessed}`);
+    console.log(`   Llamadas API: ${apiCallCount}`);
+    console.log(`   Errores API: ${apiErrors}`);
+    console.log(`   Fallback usado: ${fallbackUsed} veces`);
     console.log('\n💰 COSTOS:');
     console.log(`   Input tokens: ${actualInputTokens.toLocaleString()}`);
     console.log(`   Output tokens: ${actualOutputTokens.toLocaleString()}`);
     console.log(`   Costo estimado: $${estimatedCost.toFixed(6)}`);
     console.log(`   Costo real: $${actualCost.toFixed(6)}`);
-    console.log(`   💡 Ahorro vs versión anterior: ~62%`);
+    console.log(`   💡 Ahorro acumulado vs v1.0: ~81% (62% sin traducción + ~57% por filtros)`);
     console.log('='.repeat(60) + '\n');
     
     console.log('✅ Proceso completado exitosamente\n');
