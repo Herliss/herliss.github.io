@@ -415,12 +415,20 @@ function parseClaudeResponse(content) {
 
 function generateExtractiveSummary(article) {
     const description = article.description || '';
+    
+    // Fix: si no hay descripción, usar el título como fallback
+    if (!description || description.length < 10) {
+        return {
+            summary: article.title || 'Summary not available.'
+        };
+    }
+    
     const sentences = description.match(/[^.!?]+[.!?]+/g) || [];
     const summary = sentences.slice(0, 3).join(' ').trim();
     const truncated = summary.length > 200 ? summary.substring(0, 200) + '...' : summary;
     
     return {
-        summary: truncated || description.substring(0, 200) + '...'
+        summary: truncated || description.substring(0, 200)
     };
 }
 
@@ -620,6 +628,24 @@ function fetchRSS(url) {
     });
 }
 
+// ============================================
+// STRIP HTML - Limpia HTML de contenido RSS
+// ============================================
+
+function stripHTML(html) {
+    if (!html) return '';
+    return html
+        .replace(/<[^>]+>/g, ' ')      // eliminar tags HTML
+        .replace(/&nbsp;/g, ' ')
+        .replace(/&amp;/g, '&')
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/&quot;/g, '"')
+        .replace(/&#39;/g, "'")
+        .replace(/\s{2,}/g, ' ')       // espacios múltiples → uno
+        .trim();
+}
+
 function parseRSSItem(itemXML) {
     const getContent = (tag) => {
         const regex = new RegExp(`<${tag}(?:[^>]*)><!\\[CDATA\\[([^\\]]+)\\]\\]><\\/${tag}>|<${tag}(?:[^>]*)>([^<]+)<\\/${tag}>`, 'i');
@@ -659,11 +685,18 @@ function parseRSSItem(itemXML) {
         
         return '';
     };
+
+    // Fix cybersecuritynews.com y fuentes que usan content:encoded en lugar de description
+    const getContentEncoded = () => {
+        const regex = /<content:encoded[^>]*>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/content:encoded>/i;
+        const match = itemXML.match(regex);
+        return match ? stripHTML(match[1].trim()) : '';
+    };
     
     return {
         title: getContent('title'),
         link: getLink(),
-        description: getContent('description') || getContent('summary'),
+        description: stripHTML(getContent('description') || getContent('summary')) || getContentEncoded(),
         pubDate: getPubDate(),
         author: getContent('author') || getContent('dc:creator'),
         thumbnail: getThumbnail()
