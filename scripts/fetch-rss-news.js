@@ -21,10 +21,17 @@
  * - Blacklist (EN+ES): marketing, tutoriales, listicles, opinión
  * - Reducción adicional de costos: ~57%
  * - Solo noticias relevantes para CISOs y C-Level llegan a Claude API
- * 
+ *
+ * CAMBIOS v3.1 (Febrero 2026):
+ * - NIVEL 1: Keywords más precisos en TECHNICAL_WHITELIST (menos falsos positivos)
+ * - NIVEL 1: BLACKLIST ampliada con nombramientos, inversión, research, conferencias
+ * - NIVEL 2: Sistema de scoring (MIN_RELEVANCE_SCORE=2) reemplaza lógica binaria
+ * - Objetivo: reducir volumen de ~900/mes a ~300-380/mes con relevancia >90%
+ * - Ahorro estimado: ~60% adicional vs v3.0 en costo Claude API
+ *
  * Autor: Herliss Briceño
  * Fecha: Febrero 2026
- * Versión: 3.0
+ * Versión: 3.1
  */
 
 const https = require('https');
@@ -75,201 +82,278 @@ const SAFETY_CONFIG = {
 // Regla: BLACKLIST > WHITELIST_TÉCNICA > WHITELIST_NEGOCIO > rechazar
 // ============================================
 
+// ── NIVEL 1: Keywords más precisos para reducir falsos positivos ──────────────
 const TECHNICAL_WHITELIST = [
-    // --- Vulnerabilidades (EN) ---
-    'cve-2024-', 'cve-2025-', 'cve-2026-',
-    'cvss 9.', 'cvss 10', 'cvss:9', 'cvss:10',
+    // --- Vulnerabilidades con año reciente (EN) ---
+    // CAMBIO v3.1: 'cve-' eliminado (demasiado genérico), solo años activos
+    'cve-2025-', 'cve-2026-',
+    // CAMBIO v3.1: CVSS solo ≥7.0 (high/critical), eliminado CVSS bajo
+    'cvss 7.', 'cvss 8.', 'cvss 9.', 'cvss 10', 'cvss:7', 'cvss:8', 'cvss:9', 'cvss:10',
     'zero-day', '0-day', 'zero day',
-    'remote code execution', 'rce',
-    'privilege escalation',
-    'authentication bypass',
-    'sql injection', 'command injection', 'code injection',
-    'critical vulnerability', 'critical patch', 'critical flaw',
-    'actively exploited', 'in the wild', 'exploited in the wild',
-    'emergency patch', 'out-of-band patch',
-    'proof of concept', 'poc exploit',
+    'remote code execution', 'rce vulnerability', 'rce exploit',
+    'privilege escalation exploit', 'privilege escalation vulnerability',
+    'authentication bypass vulnerability', 'authentication bypass exploit',
+    'sql injection attack', 'command injection exploit',
+    'critical vulnerability in', 'critical flaw in',
+    // CAMBIO v3.1: "actively exploited" = señal fuerte de impacto real
+    'actively exploited', 'exploited in the wild', 'exploitation detected',
+    'emergency patch', 'out-of-band patch', 'urgent security update',
+    // CAMBIO v3.1: solo POC con impacto confirmado
+    'poc exploit released', 'exploit code published', 'working exploit',
 
     // --- Vulnerabilidades (ES) ---
-    'cve-', 'día cero',
-    'ejecución remota de código',
-    'escalada de privilegios', 'escalamiento de privilegios',
-    'bypass de autenticación',
-    'inyección sql', 'inyección de código',
-    'vulnerabilidad crítica', 'vulnerabilidad activamente explotada',
-    'parche de emergencia', 'parche crítico',
-    'siendo explotado', 'explotado activamente',
+    // CAMBIO v3.1: 'cve-' eliminado del español también
+    'día cero explotado', 'vulnerabilidad día cero',
+    'ejecución remota de código', 'ejecución de código remoto',
+    'escalada de privilegios explotada',
+    'bypass de autenticación explotado',
+    'vulnerabilidad crítica en', 'fallo crítico en',
+    'activamente explotado', 'explotado activamente',
+    'parche de emergencia', 'actualización de seguridad urgente',
 
-    // --- Threat Intelligence (EN) ---
+    // --- Threat Intelligence — Grupos APT nombrados (EN) ---
+    // CAMBIO v3.1: grupos específicos conservados (alta señal), sin términos genéricos
     'apt28', 'apt29', 'apt32', 'apt33', 'apt41', 'apt40',
-    'lazarus', 'lazarus group', 'kimsuky', 'volt typhoon',
+    'lazarus group', 'kimsuky', 'volt typhoon', 'salt typhoon',
     'fancy bear', 'cozy bear', 'sandworm', 'scattered spider',
-    'lockbit', 'blackcat', 'alphv', 'conti', 'ryuk', 'cl0p', 'clop',
-    'ransomware attack', 'ransomware campaign',
-    'malware campaign', 'malware family',
-    'supply chain attack', 'supply chain compromise',
-    'nation-state', 'state-sponsored',
-    'phishing campaign', 'spear phishing',
-    'data breach', 'data leak', 'data exfiltration',
-    'credential theft', 'credential stuffing',
-    'botnet', 'command and control', 'c2 server',
-    'backdoor', 'rootkit', 'trojan', 'infostealer',
-    'ddos attack', 'denial of service',
+    'lockbit', 'blackcat', 'alphv', 'cl0p', 'clop', 'rhysida', 'play ransomware',
+    // CAMBIO v3.1: ransomware solo con contexto de ataque confirmado
+    'hit by ransomware', 'ransomware attack on', 'ransomware struck',
+    'ransomware encrypted', 'victim of ransomware',
+    // CAMBIO v3.1: 'malware campaign' y 'malware family' reemplazados por más específicos
+    'active malware campaign', 'new malware strain', 'malware targeting',
+    'supply chain attack', 'supply chain compromise', 'supply chain breach',
+    'nation-state attack', 'state-sponsored attack', 'state-sponsored hacking',
+    // CAMBIO v3.1: spear phishing conservado (más específico que phishing general)
+    'spear phishing campaign', 'targeted phishing attack',
+    // CAMBIO v3.1: data breach solo con contexto confirmado
+    'confirmed data breach', 'data breach affecting', 'data breach exposes',
+    'leaked database', 'exposed records', 'millions of records',
+    'data exfiltration detected', 'data stolen from',
+    'credential stuffing attack', 'credential theft campaign',
+    'botnet takedown', 'botnet dismantled', 'botnet targeting',
+    'c2 infrastructure', 'command and control server seized',
+    // CAMBIO v3.1: backdoor/rootkit/trojan solo con contexto de descubrimiento real
+    'backdoor discovered', 'backdoor deployed', 'backdoor found in',
+    'rootkit detected', 'trojan targeting', 'infostealer campaign',
+    'ddos attack on', 'massive ddos', 'record-breaking ddos',
 
     // --- Threat Intelligence (ES) ---
-    'ataque ransomware', 'campaña ransomware',
-    'campaña de malware', 'familia de malware',
+    'ataque ransomware confirmado', 'víctima de ransomware',
+    'cifrado por ransomware',
     'ataque a la cadena de suministro',
-    'estado-nación', 'patrocinado por estado',
-    'campaña de phishing',
-    'brecha de datos', 'filtración de datos',
-    'robo de credenciales',
-    'ataque ddos',
+    'ataque de estado-nación', 'hacking patrocinado por estado',
+    'campaña de spear phishing',
+    'brecha de datos confirmada', 'filtración de datos expone',
+    'millones de registros expuestos',
+    'robo de credenciales confirmado',
+    'ataque ddos masivo',
 
-    // --- Sectores Críticos (EN) ---
-    'banking sector', 'financial services', 'fintech',
-    'healthcare', 'hospital attacked', 'medical devices',
-    'critical infrastructure', 'power grid', 'water utility',
-    'energy sector', 'oil and gas',
-    'scada', 'ics', 'ot security', 'industrial control',
-    'defense contractor', 'military',
+    // --- Sectores Críticos — solo con incidente real (EN) ---
+    // CAMBIO v3.1: 'healthcare', 'fintech', 'banking sector' eliminados (muy genéricos)
+    'hospital attacked', 'hospital ransomware', 'healthcare data breach',
+    'medical records exposed', 'patient data leaked',
+    'critical infrastructure attack', 'power grid attack', 'water utility hacked',
+    'energy company breached', 'oil and gas cyberattack',
+    'scada attack', 'ics vulnerability exploited', 'ot network compromised',
+    'defense contractor breach', 'military systems hacked',
+    'bank cyberattack', 'financial institution breach',
 
     // --- Sectores Críticos (ES) ---
-    'sector bancario', 'servicios financieros',
-    'infraestructura crítica', 'red eléctrica',
-    'sector energético',
+    'hospital atacado', 'datos de pacientes expuestos',
+    'infraestructura crítica atacada', 'red eléctrica hackeada',
+    'empresa energética comprometida',
+    'banco atacado', 'institución financiera comprometida',
 
-    // --- Tecnologías Afectadas (EN+ES) ---
-    'active directory', 'domain controller',
-    'exchange server', 'sharepoint',
-    'vmware esxi', 'vcenter',
-    'citrix netscaler', 'fortinet fortigate',
-    'palo alto', 'cisco ios',
-    'sap vulnerability', 'oracle database',
+    // --- Tecnologías Afectadas — vulnerabilidad específica (EN+ES) ---
+    // CAMBIO v3.1: solo con "vulnerability", "exploit" o "breach" para evitar menciones genéricas
+    'active directory vulnerability', 'domain controller compromised',
+    'exchange server vulnerability', 'exchange server exploit',
+    'vmware esxi vulnerability', 'vcenter exploit',
+    'citrix netscaler vulnerability', 'fortinet fortigate exploit',
+    'cisco ios vulnerability', 'sap vulnerability', 'oracle database exploit',
+    'palo alto vulnerability', 'checkpoint vulnerability',
 
-    // --- Compliance / Regulación (EN) ---
-    'gdpr fine', 'gdpr violation',
-    'pci-dss', 'hipaa breach',
-    'sec cybersecurity', 'nist framework',
-    'nis2', 'dora regulation',
+    // --- Compliance / Regulación — con sanción o acción real (EN) ---
+    // CAMBIO v3.1: solo cuando hay multa, violación o acción regulatoria concreta
+    'gdpr fine', 'gdpr violation', 'gdpr penalty',
+    'hipaa breach penalty', 'hipaa violation fine',
+    'sec cybersecurity charges', 'sec enforcement action',
+    'nis2 compliance deadline', 'dora compliance requirement',
+    'pci-dss violation', 'regulatory sanction',
 
     // --- Compliance / Regulación (ES) ---
-    'multa gdpr', 'incumplimiento gdpr',
-    'regulación nis2', 'regulación dora'
+    'multa gdpr', 'sanción gdpr', 'violación gdpr',
+    'multa hipaa', 'sanción regulatoria',
+    'cumplimiento nis2', 'requisito dora'
 ];
 
 const BUSINESS_WHITELIST = [
-    // --- Impacto Financiero (EN) ---
-    'million ransom', 'billion ransom',
-    'ransom paid', 'paid ransom',
-    'fined $', 'million fine', 'billion fine',
-    '$10 million', '$50 million', '$100 million',
-    'financial loss', 'financial damage',
-    'insurance claim', 'cyber insurance payout',
-    'stock price', 'shares fell', 'market impact',
-    'class action', 'lawsuit filed', 'sec charges',
+    // --- Impacto Financiero confirmado (EN) ---
+    // CAMBIO v3.1: umbrales más altos, solo impacto real documentado
+    'million ransom paid', 'billion ransom',
+    'ransom paid', 'paid ransom to',
+    'fined $', 'million fine', 'billion fine', 'million penalty',
+    '$10 million', '$50 million', '$100 million', '$500 million',
+    'financial loss of', 'financial damage of',
+    'cyber insurance payout', 'insurance claim filed',
+    'shares fell', 'stock dropped', 'market cap loss',
+    'class action lawsuit', 'sec charges filed', 'ftc charges',
 
     // --- Impacto Financiero (ES) ---
-    'millones de rescate', 'rescate pagado',
-    'multado con', 'multa de', 'multa millonaria',
-    '10 millones', '50 millones', '100 millones',
-    'pérdida financiera', 'daño financiero',
-    'demanda colectiva', 'cargos de la sec',
+    'millones de rescate pagado', 'rescate pagado a',
+    'multado con', 'multa de', 'sanción de',
+    '10 millones de dólares', '50 millones', '100 millones',
+    'pérdida financiera de', 'daño económico de',
+    'demanda colectiva presentada', 'cargos presentados',
 
-    // --- Interrupción Operacional (EN) ---
-    'operations shut down', 'operations disrupted',
-    'services offline', 'taken offline',
-    'business disruption', 'production halted',
-    'days offline', 'weeks offline',
-    'forced to shut', 'systems down',
+    // --- Interrupción Operacional severa (EN) ---
+    // CAMBIO v3.1: requiere contexto de interrupción real, no genérico
+    'operations shut down', 'forced to shut down', 'production halted',
+    'services taken offline', 'systems taken down',
+    'days of downtime', 'weeks of downtime', 'days offline',
+    'business operations disrupted', 'supply chain disrupted',
 
     // --- Interrupción Operacional (ES) ---
-    'operaciones detenidas', 'servicios interrumpidos',
-    'sistemas fuera de línea', 'producción paralizada',
-    'días sin operar', 'semanas sin operar',
+    'operaciones detenidas por', 'producción paralizada',
+    'sistemas fuera de línea', 'días sin operar', 'semanas sin operar',
+    'operaciones interrumpidas',
 
-    // --- Alto Perfil (EN) ---
-    'fortune 500', 'fortune 100',
-    'nasdaq breach', 'nyse breach',
-    'central bank', 'treasury department',
-    'white house', 'pentagon',
-    'critical national infrastructure',
+    // --- Alto Perfil — organizaciones nombradas (EN) ---
+    // CAMBIO v3.1: solo con contexto de incidente
+    'fortune 500 company breached', 'fortune 100 breach',
+    'central bank hacked', 'treasury department breach',
+    'government agency hacked', 'federal agency breach',
+    'critical national infrastructure compromised',
+    'white house cybersecurity', 'pentagon breach',
 
     // --- Alto Perfil (ES) ---
-    'banco central', 'ministerio de',
-    'infraestructura nacional crítica',
+    'banco central hackeado', 'ministerio hackeado',
+    'agencia gubernamental comprometida',
+    'infraestructura nacional comprometida',
 
-    // --- Regulación y Cumplimiento (EN) ---
-    'new regulation', 'mandatory reporting',
-    'compliance deadline', 'regulatory fine',
-    'breach notification law', 'new cybersecurity law',
-    'executive order', 'cisa directive',
+    // --- Regulación y Cumplimiento — obligaciones nuevas (EN) ---
+    'mandatory breach notification', 'breach notification required',
+    'new cybersecurity regulation', 'new cybersecurity law',
+    'compliance deadline approaching', 'regulatory fine issued',
+    'cisa binding directive', 'executive order cybersecurity',
 
     // --- Regulación y Cumplimiento (ES) ---
-    'nueva regulación', 'reporte obligatorio',
-    'plazo de cumplimiento', 'multa regulatoria',
-    'nueva ley de ciberseguridad', 'directiva de seguridad',
+    'notificación de brecha obligatoria', 'nueva ley de ciberseguridad',
+    'plazo de cumplimiento', 'directiva vinculante',
 
-    // --- Seguros y Responsabilidad (EN+ES) ---
-    'cyber insurance', 'seguro cibernético',
-    'board liability', 'director liability',
-    'ciso arrested', 'ciso charged', 'ciso liability',
-    'ciso detenido', 'responsabilidad del ciso'
+    // --- Responsabilidad CISO/Ejecutivos (EN+ES) ---
+    'ciso arrested', 'ciso charged', 'ciso convicted',
+    'ciso liability', 'board cybersecurity liability',
+    'director charged for breach', 'executive accountability',
+    'ciso detenido', 'responsabilidad del ciso',
+    'responsabilidad del consejo', 'ejecutivo procesado'
 ];
 
 const BLACKLIST = [
     // --- Marketing y Eventos (EN) ---
-    'webinar', 'register now', 'sign up now',
-    'product launch', 'new product', 'announcing',
-    'partnership', 'sponsored', 'advertisement',
-    'free trial', 'demo available', 'buy now',
-    'limited time offer', 'discount',
-    'podcast episode', 'join us',
+    'webinar', 'register now', 'sign up now', 'register for free',
+    'product launch', 'new product', 'announcing', 'we are excited to',
+    'partnership', 'strategic partnership', 'sponsored', 'advertisement',
+    'free trial', 'demo available', 'buy now', 'request a demo',
+    'limited time offer', 'discount', 'promo code',
+    'podcast episode', 'join us for', 'save your seat',
+    'early bird', 'use code ', 'get started free',
 
     // --- Marketing y Eventos (ES) ---
-    'webinario', 'regístrate ahora', 'inscríbete',
-    'lanzamiento de producto', 'nuevo producto',
-    'alianza estratégica', 'patrocinado',
-    'prueba gratuita', 'demo disponible',
-    'episodio de podcast',
+    'webinario', 'regístrate ahora', 'inscríbete', 'regístrate gratis',
+    'lanzamiento de producto', 'nuevo producto', 'nos complace anunciar',
+    'alianza estratégica', 'patrocinado', 'prueba gratuita',
+    'demo disponible', 'solicita una demo',
+    'episodio de podcast', 'únete a nosotros',
 
     // --- Educativo Básico (EN) ---
-    'beginner guide', 'introduction to',
+    'beginner guide', 'introduction to', 'intro to',
     'basics of', 'what is a ', 'getting started with',
-    'for beginners', 'learn how to', '101 guide',
-    'step by step', 'how to set up',
+    'for beginners', 'learn how to', '101 guide', '101:',
+    'step by step', 'how to set up', 'how to configure',
+    'tutorial:', 'complete guide to', 'cheat sheet',
 
     // --- Educativo Básico (ES) ---
     'guía para principiantes', 'introducción a',
-    'conceptos básicos', 'qué es un ', 'primeros pasos con',
-    'para principiantes', 'aprende cómo',
-    'paso a paso',
+    'conceptos básicos', 'qué es un ', 'qué es la ',
+    'primeros pasos con', 'para principiantes',
+    'aprende cómo', 'paso a paso', 'cómo configurar',
+    'tutorial:', 'guía completa de',
 
     // --- Listicles (EN+ES) ---
-    'top 10', 'top 5', 'top 3',
-    'best of', 'ultimate guide', 'guía definitiva',
-    'los 10 mejores', 'los 5 mejores',
+    'top 10', 'top 5', 'top 3', 'top 7', 'top 15', 'top 20',
+    'best of', 'ultimate guide', 'best practices guide',
+    'guía definitiva', 'los 10 mejores', 'los 5 mejores',
+    'the best ', 'the top ',
 
     // --- Updates y Correcciones (EN+ES) ---
     '[updated]', '[actualizado]',
     'correction:', 'corrección:',
-    'editor\'s note:', 'nota del editor:',
+    "editor's note:", 'nota del editor:',
 
     // --- Teórico / Hipotético (EN+ES) ---
     'theoretical attack', 'hypothetical scenario',
     'researchers speculate', 'could potentially',
+    'researchers imagine', 'what if scenario',
     'ataque teórico', 'escenario hipotético',
     'predicciones para', 'predictions for ',
+    'forecast for ', 'outlook for ',
 
     // --- Opinión y Editorial (EN+ES) ---
     'opinion:', 'opinión:', 'editorial:',
-    'my take:', 'point of view',
-    'mi opinión:', 'punto de vista',
+    'my take:', 'point of view', 'commentary:',
+    'mi opinión:', 'punto de vista', 'columna de opinión',
 
     // --- Roundups (EN+ES) ---
-    'weekly roundup', 'weekly recap',
-    'monthly summary', 'year in review',
-    'resumen semanal', 'resumen mensual',
-    'lo mejor de la semana'
+    'weekly roundup', 'weekly recap', 'weekly digest',
+    'monthly summary', 'year in review', 'annual recap',
+    'resumen semanal', 'resumen mensual', 'resumen anual',
+    'lo mejor de la semana', 'digest semanal',
+
+    // --- NUEVO v3.1: Nombramientos y RRHH (EN+ES) ---
+    ' appoints ', ' named as ', ' joins as ', ' promoted to ',
+    ' hired as ', ' welcomes ', ' announces appointment',
+    'new ciso at', 'new cto at', 'new ceo at',
+    'nombrado como', 'se une como', 'promovido a',
+    'contratado como', 'nuevo ciso en', 'nuevo cto en',
+
+    // --- NUEVO v3.1: Inversión y Financiamiento (EN+ES) ---
+    'raises $', 'series a funding', 'series b funding', 'series c funding',
+    'funding round', 'million investment', 'billion valuation',
+    'venture capital', 'ipo filing', 'goes public',
+    'recauda $', 'ronda de financiamiento', 'millones de inversión',
+    'capital de riesgo', 'valoración de',
+
+    // --- NUEVO v3.1: Research Académico sin impacto real (EN+ES) ---
+    'university researchers', 'academic study shows',
+    'researchers demonstrate how', 'researchers show that',
+    'proof of concept only', 'theoretical poc',
+    'investigadores demuestran cómo', 'estudio académico',
+    'demostración teórica',
+
+    // --- NUEVO v3.1: Análisis de Mercado y Analistas (EN+ES) ---
+    'market report', 'market research', 'market analysis',
+    'gartner report', 'forrester report', 'idc report', 'idc study',
+    'industry report', 'analyst report', 'market forecast',
+    'informe de mercado', 'análisis de mercado', 'informe gartner',
+
+    // --- NUEVO v3.1: Premios y Reconocimientos (EN+ES) ---
+    'award', 'recognized as leader', 'magic quadrant leader',
+    'best company', 'named a leader', 'wins award',
+    'premio', 'reconocido como líder', 'gana el premio',
+    'mejor empresa de', 'líder del cuadrante',
+
+    // --- NUEVO v3.1: Conferencias sin incidente (EN+ES) ---
+    // Solo bloqueamos anuncios de conferencias, no reportes de incidentes presentados
+    'at defcon: how', 'blackhat presentation', 'rsa conference keynote',
+    'speaking at ', 'talk at defcon', 'session at blackhat',
+    'presentación en defcon', 'charla en blackhat',
+
+    // --- NUEVO v3.1: Contenido Motivacional / Awareness genérico (EN+ES) ---
+    'cyber awareness month', 'security awareness tips',
+    'stay safe online', 'cyber hygiene tips', 'best security habits',
+    'mes de concienciación', 'consejos de seguridad', 'hábitos de seguridad'
 ];
 
 // ============================================
@@ -284,65 +368,177 @@ const filterStats = {
 };
 
 // ============================================
-// FUNCIÓN DE DECISIÓN PRE-API
-// Determina si una noticia debe ser procesada con Claude
+// NIVEL 2: SISTEMA DE SCORING (v3.1)
+// Umbral mínimo: MIN_RELEVANCE_SCORE = 2
+// Reemplaza lógica binaria "1 keyword = aprobado"
 // ============================================
 
+const MIN_RELEVANCE_SCORE = 2; // Puntaje mínimo para aprobar
+
+// Señales de ALTO impacto (+2 puntos)
+const HIGH_IMPACT_SIGNALS = [
+    // Explotación activa confirmada
+    'actively exploited', 'exploited in the wild', 'exploitation detected',
+    'activamente explotado', 'explotado activamente',
+    // CVE con año actual
+    'cve-2025-', 'cve-2026-',
+    // APT / grupo nombrado con víctima
+    'lazarus group', 'volt typhoon', 'salt typhoon', 'apt28', 'apt29',
+    'apt41', 'apt40', 'fancy bear', 'cozy bear', 'sandworm', 'scattered spider',
+    'kimsuky', 'apt32', 'apt33',
+    // Ransomware con víctima confirmada
+    'hit by ransomware', 'ransomware attack on', 'ransomware struck',
+    'ransomware encrypted', 'victim of ransomware',
+    'víctima de ransomware', 'cifrado por ransomware',
+    // Impacto financiero documentado (>$1M)
+    '$10 million', '$50 million', '$100 million', '$500 million',
+    'million ransom paid', 'billion ransom', 'ransom paid to',
+    '50 millones', '100 millones', 'rescate pagado',
+    // Grupos ransomware activos
+    'lockbit', 'blackcat', 'alphv', 'cl0p', 'clop', 'rhysida', 'play ransomware',
+    // Supply chain confirmado
+    'supply chain attack', 'supply chain compromise', 'supply chain breach',
+    'ataque a la cadena de suministro',
+    // Emergencia confirmada
+    'emergency patch', 'out-of-band patch', 'urgent security update',
+    'parche de emergencia', 'actualización de seguridad urgente',
+    // CVSS 9+
+    'cvss 9.', 'cvss 10', 'cvss:9', 'cvss:10',
+];
+
+// Señales de IMPACTO MODERADO (+1 punto)
+const MEDIUM_IMPACT_SIGNALS = [
+    // CVE CVSS 7-8
+    'cvss 7.', 'cvss 8.', 'cvss:7', 'cvss:8',
+    // Zero-day
+    'zero-day', '0-day', 'zero day', 'día cero',
+    // Parches importantes
+    'critical patch', 'patch tuesday', 'security advisory',
+    // RCE/Privilege escalation
+    'remote code execution', 'rce vulnerability', 'rce exploit',
+    'privilege escalation exploit', 'ejecución remota de código',
+    // Breach confirmada
+    'confirmed data breach', 'data breach affecting', 'data breach exposes',
+    'leaked database', 'millions of records', 'brecha de datos confirmada',
+    // Infraestructura crítica
+    'critical infrastructure attack', 'power grid attack', 'water utility hacked',
+    'hospital attacked', 'hospital ransomware', 'healthcare data breach',
+    'infraestructura crítica atacada', 'hospital atacado',
+    // Interrupción operacional
+    'operations shut down', 'production halted', 'forced to shut down',
+    'days of downtime', 'operaciones detenidas', 'producción paralizada',
+    // Regulación con sanción
+    'gdpr fine', 'gdpr violation', 'gdpr penalty', 'multa gdpr',
+    'hipaa breach penalty', 'sec enforcement action',
+    'cisa binding directive', 'executive order cybersecurity',
+    // Responsabilidad ejecutiva
+    'ciso arrested', 'ciso charged', 'ciso convicted',
+    'ciso detenido', 'ejecutivo procesado',
+    // Fuentes oficiales con advisory
+    'cisa alert', 'us-cert advisory', 'microsoft security advisory',
+    'cisco security advisory', 'fortinet security advisory',
+];
+
+// Señales NEGATIVAS que restan puntos
+const NEGATIVE_SIGNALS = [
+    // Verbos condicionales (no es incidente real)
+    ' could ', ' may ', ' might ', ' would ', ' should ',
+    ' podría ', ' podría ser ', ' posiblemente ',
+    // Research sin víctima real
+    'researchers say', 'researchers found that', 'researchers discovered that',
+    'researchers demonstrate', 'university researchers',
+    'investigadores dicen', 'investigadores encontraron',
+    // Análisis retrospectivo
+    'last year\'s', 'back in 2024', 'back in 2023', 'historically',
+    'del año pasado', 'en 2024',
+];
+
 /**
- * Evalúa si un artículo es relevante para CISOs / C-Level
- * antes de enviarlo a Claude API
+ * Sistema de scoring v3.1
+ * Evalúa si un artículo es relevante para CISOs/C-Level
+ * con puntaje mínimo configurable (MIN_RELEVANCE_SCORE)
+ *
  * @param {Object} article - { title, description }
- * @returns {Object} - { process: Boolean, reason, category, audience, matchedKeyword }
+ * @returns {Object} - { process, reason, category, audience, score, matchedKeywords }
  */
 function shouldProcessWithClaude(article) {
     const text = `${article.title || ''} ${article.description || ''}`.toLowerCase();
 
-    // PASO 1: BLACKLIST — prioridad absoluta
+    // ── PASO 1: BLACKLIST — prioridad absoluta, score irrelevante ──────────────
     for (const keyword of BLACKLIST) {
         if (text.includes(keyword.toLowerCase())) {
             return {
                 process: false,
-                reason: `Blacklist: ${keyword}`,
+                reason: `Blacklist: "${keyword}"`,
                 category: 'blocked',
                 audience: 'N/A',
-                matchedKeyword: keyword
+                score: -99,
+                matchedKeywords: [keyword]
             };
         }
     }
 
-    // PASO 2: WHITELIST TÉCNICA
-    for (const keyword of TECHNICAL_WHITELIST) {
-        if (text.includes(keyword.toLowerCase())) {
-            return {
-                process: true,
-                reason: `Technical: ${keyword}`,
-                category: 'technical',
-                audience: 'CISO/Technical',
-                matchedKeyword: keyword
-            };
+    // ── PASO 2: SCORING — acumular puntos por señales de impacto ──────────────
+    let score = 0;
+    const matchedKeywords = [];
+
+    // Señales de alto impacto (+2 cada una, máximo 3 matches para evitar inflación)
+    let highMatches = 0;
+    for (const signal of HIGH_IMPACT_SIGNALS) {
+        if (text.includes(signal.toLowerCase())) {
+            score += 2;
+            matchedKeywords.push(`+2:"${signal}"`);
+            highMatches++;
+            if (highMatches >= 3) break; // Limitar a 3 señales high
         }
     }
 
-    // PASO 3: WHITELIST NEGOCIO
-    for (const keyword of BUSINESS_WHITELIST) {
-        if (text.includes(keyword.toLowerCase())) {
-            return {
-                process: true,
-                reason: `Business: ${keyword}`,
-                category: 'business',
-                audience: 'C-Level/Management',
-                matchedKeyword: keyword
-            };
+    // Señales de impacto moderado (+1 cada una, máximo 3 matches)
+    let medMatches = 0;
+    for (const signal of MEDIUM_IMPACT_SIGNALS) {
+        if (text.includes(signal.toLowerCase())) {
+            score += 1;
+            matchedKeywords.push(`+1:"${signal}"`);
+            medMatches++;
+            if (medMatches >= 3) break;
         }
     }
 
-    // PASO 4: SIN MATCH — rechazar por defecto
+    // Señales negativas (-1 cada una)
+    for (const signal of NEGATIVE_SIGNALS) {
+        if (text.includes(signal.toLowerCase())) {
+            score -= 1;
+            matchedKeywords.push(`-1:"${signal}"`);
+        }
+    }
+
+    // ── PASO 3: DECISIÓN por umbral ───────────────────────────────────────────
+    const approved = score >= MIN_RELEVANCE_SCORE;
+
+    // Determinar categoría y audiencia
+    let category = 'no_match';
+    let audience = 'N/A';
+
+    if (approved) {
+        // ¿Es técnico o negocio?
+        const isTechnical = HIGH_IMPACT_SIGNALS.concat(MEDIUM_IMPACT_SIGNALS)
+            .filter(s => ['cve', 'cvss', 'rce', 'exploit', 'malware', 'backdoor',
+                         'zero-day', 'vulnerability', 'advisory'].some(t => s.includes(t)))
+            .some(s => text.includes(s.toLowerCase()));
+
+        category = isTechnical ? 'technical' : 'business';
+        audience = isTechnical ? 'CISO/Technical' : 'C-Level/Management';
+    }
+
     return {
-        process: false,
-        reason: 'No whitelist match',
-        category: 'no_match',
-        audience: 'N/A',
-        matchedKeyword: null
+        process: approved,
+        reason: approved
+            ? `Score ${score} ≥ ${MIN_RELEVANCE_SCORE}: ${matchedKeywords.slice(0, 3).join(', ')}`
+            : `Score ${score} < ${MIN_RELEVANCE_SCORE}: insuficiente relevancia`,
+        category,
+        audience,
+        score,
+        matchedKeywords
     };
 }
 
@@ -1197,18 +1393,18 @@ async function main() {
     
     // Resumen final
     console.log('\n' + '='.repeat(60));
-    console.log('📊 RESUMEN DE EJECUCIÓN');
+    console.log('📊 RESUMEN DE EJECUCIÓN v3.1');
     console.log('='.repeat(60));
     console.log(`✅ Fuentes exitosas: ${successfulSources}`);
     console.log(`❌ Fuentes fallidas: ${failedSources}`);
-    console.log(`\n🔍 FILTRADO PRE-API:`);
+    console.log(`\n🔍 FILTRADO PRE-API (Nivel 1 + Nivel 2 | Score mínimo: ${MIN_RELEVANCE_SCORE}):`);
     console.log(`   Total evaluadas:  ${filterStats.total}`);
     console.log(`   ✅ Aprobadas:     ${filterStats.approved} (${filterStats.total > 0 ? Math.round(filterStats.approved / filterStats.total * 100) : 0}%)`);
     console.log(`   ❌ Rechazadas:    ${filterStats.rejected} (${filterStats.total > 0 ? Math.round(filterStats.rejected / filterStats.total * 100) : 0}%)`);
     console.log(`   - Técnicas:       ${filterStats.byCategory.technical}`);
     console.log(`   - Negocio:        ${filterStats.byCategory.business}`);
-    console.log(`   - Bloqueadas:     ${filterStats.byCategory.blocked}`);
-    console.log(`   - Sin match:      ${filterStats.byCategory.no_match}`);
+    console.log(`   - Bloqueadas BL:  ${filterStats.byCategory.blocked}`);
+    console.log(`   - Score bajo:     ${filterStats.byCategory.no_match}`);
     console.log(`\n🤖 CLAUDE API:`);
     console.log(`   Artículos procesados: ${articlesProcessed}`);
     console.log(`   Llamadas API: ${apiCallCount}`);
@@ -1219,7 +1415,7 @@ async function main() {
     console.log(`   Output tokens: ${actualOutputTokens.toLocaleString()}`);
     console.log(`   Costo estimado: $${estimatedCost.toFixed(6)}`);
     console.log(`   Costo real: $${actualCost.toFixed(6)}`);
-    console.log(`   💡 Ahorro acumulado vs v1.0: ~81% (62% sin traducción + ~57% por filtros)`);
+    console.log(`   💡 Ahorro acumulado vs v1.0: ~88% (62% sin traducción + filtros v3.1)`);
     console.log('='.repeat(60) + '\n');
     
     console.log('✅ Proceso completado exitosamente\n');
